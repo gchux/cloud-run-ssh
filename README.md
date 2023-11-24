@@ -1,5 +1,6 @@
 # cloud-run-ssh
 
+```shell
 docker build \
 --build-arg="CLOUDSDK_VERSION=..." \
 --build-arg="CSQL_PROXY_VERSION=..." \
@@ -9,3 +10,4 @@ docker build \
 --build-arg="USER_NAME=..." \
 --build-arg="USER_PASS=..." \
 -t  .
+```
