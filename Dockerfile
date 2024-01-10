@@ -1,14 +1,13 @@
 # the base image: https://github.com/linuxserver/docker-openssh-server
 FROM linuxserver/openssh-server
 
-# these ARG entries match the `--build-arg` from `cloudbuild.yaml`
-ARG CLOUDSDK_VERSION=437.0.1
-ARG CSQL_PROXY_VERSION=2.4.0
-ARG ALLOYDB_PROXY_VERSION=1.3.0
-ARG USQL_VERSION=0.14.8
-ARG SERVICE_PORT=8080
-ARG SSH_USER=test
-ARG SSH_PASS=test
+ARG CLOUDSDK_VERSION
+ARG CSQL_PROXY_VERSION
+ARG ALLOYDB_PROXY_VERSION
+ARG USQL_VERSION
+ARG SERVICE_PORT
+ARG SSH_USER
+ARG SSH_PASS
 
 ENV SUDO_ACCESS=true
 ENV PASSWORD_ACCESS=true
@@ -46,7 +45,7 @@ RUN tar -xvf /usql_static-${USQL_VERSION}-linux-amd64.tar.bz2 \
 
 RUN echo -n "${HTTP_PORT}" > /http.port
 
-EXPOSE ${SERVICE_PORT}/tcp
+EXPOSE ${HTTP_PORT}/tcp
 
 # web ssh terminal: https://github.com/huashengdun/webssh
-CMD ["/bin/bash", "-c", "export HTTP_PORT=$(cat /http.port | tr -d '\n') && exec wssh --port=${HTTP_PORT} --xheaders=False"]
+CMD ["/bin/bash", "-c", "export HTTP_PORT=$(cat /http.port) && exec wssh --port=${HTTP_PORT} --xheaders=False"]
