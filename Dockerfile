@@ -48,4 +48,4 @@ RUN echo -n "${HTTP_PORT}" > /http.port
 EXPOSE ${HTTP_PORT}/tcp
 
 # web ssh terminal: https://github.com/huashengdun/webssh
-CMD ["/bin/bash", "-c", "export HTTP_PORT=$(cat /http.port | tr -d '\n') && exec wssh --port=${HTTP_PORT} --xheaders=False"]
+CMD ["/bin/bash", "-c", "export HTTP_PORT=$(cat /http.port | tr -d '\n') && exec wssh --port=${HTTP_PORT} --xheaders=False --debug=True --origin='*'"]
