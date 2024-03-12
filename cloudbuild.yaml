@@ -1,23 +1,33 @@
-- name: 'gcr.io/cloud-builders/docker'
-  args:
-    - build
-    # https://cloud.google.com/sdk/docs/release-notes ( i/e: 455.0.0 )
-    - --build-arg
-    - CLOUDSDK_VERSION=455.0.0
-    # https://github.com/GoogleCloudPlatform/cloud-sql-proxy/releases ( i/e: 2.4.0 )
-    - --build-arg
-    - CSQL_PROXY_VERSION=2.4.0
-    # https://github.com/GoogleCloudPlatform/alloydb-auth-proxy/releases ( i/e: 1.3.0 )
-    - --build-arg
-    - ALLOYDB_PROXY_VERSION=1.3.0
+steps:
+  - id: "build image"
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}'
+      - '--build-arg=CLOUDSDK_VERSION=${_CLOUDSDK_VERSION}'
+      - '--build-arg=CSQL_PROXY_VERSION=${_CSQL_PROXY_VERSION}'
+      - '--build-arg=ALLOYDB_PROXY_VERSION=${_ALLOYDB_PROXY_VERSION}'
+      - '--build-arg=USQL_VERSION=${_USQL_VERSION}'
+      - '--build-arg=SERVICE_PORT=${_SERVICE_PORT}'
+      - '--build-arg=SSH_USER=${_USER_NAME}'
+      - '--build-arg=SSH_PASS=${_USER_PASS}'
+      - '.'
+  - id: "push image"
+    name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}"]
+
+substitutions:
+  _PROJECT_ID: PROJECT-ID
+  _SERVICE_NAME: SERVICE-NAME
+  # http://cloud/sdk/docs/release-notes ( i/e: 437.0.1 )
+  _CLOUDSDK_VERSION: 459.0.0
+  # https://github.com/GoogleCloudPlatform/cloud-sql-proxy/releases ( i/e: 2.4.0 )
+  _CSQL_PROXY_VERSION: 2.8.1
+   # https://github.com/GoogleCloudPlatform/alloydb-auth-proxy/releases ( i/e: 1.3.0 )
+  _ALLOYDB_PROXY_VERSION: 1.6.1
     # https://github.com/xo/usql/releases ( i/e: 0.14.8 )
-    - --build-arg
-    - USQL_VERSION=0.14.8
-    - --build-arg
-    - USER_NAME=test
-    - --build-arg
-    - USER_PASSWORD=test
-    - --build-arg
-    - SERVICE_PORT=8080
-    - --tag
-    - us-docker.pkg.dev/chux-testing/serverless/ssh
+  _USQL_VERSION: 0.17.5
+  _SERVICE_PORT: '8080' # You can replace this
+  _USER_NAME: 'user' # Choose a username
+  _USER_PASS: '123123' # Choose a password
