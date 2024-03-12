@@ -13,10 +13,7 @@ steps:
       - '--build-arg=SSH_USER=${_USER_NAME}'
       - '--build-arg=SSH_PASS=${_USER_PASS}'
       - '.'
-  - id: "push image"
-    name: "gcr.io/cloud-builders/docker"
-    args: ["push", "${_REPO_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${_IMAGE_TAG}"]
-
+images: ['${_REPO_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${_IMAGE_TAG}']
 substitutions:
   # http://cloud/sdk/docs/release-notes ( i/e: 437.0.1 )
   _CLOUDSDK_VERSION: 459.0.0
