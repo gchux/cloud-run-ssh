@@ -4,7 +4,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}'
+      - '${_REPO_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${_IMAGE_TAG}'
       - '--build-arg=CLOUDSDK_VERSION=${_CLOUDSDK_VERSION}'
       - '--build-arg=CSQL_PROXY_VERSION=${_CSQL_PROXY_VERSION}'
       - '--build-arg=ALLOYDB_PROXY_VERSION=${_ALLOYDB_PROXY_VERSION}'
