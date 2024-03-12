@@ -29,4 +29,4 @@ substitutions:
   _SERVICE_PORT: '8080' # You can replace this
   _USER_NAME: 'user' # Choose a username
   _USER_PASS: '123123' # Choose a password
-tags: ['ssh', '${_BUILD_TAG:-default}']
+tags: ['ssh', '${_BUILD_TAG}']
