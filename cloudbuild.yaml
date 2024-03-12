@@ -15,11 +15,9 @@ steps:
       - '.'
   - id: "push image"
     name: "gcr.io/cloud-builders/docker"
-    args: ["push", "gcr.io/${_PROJECT_ID}/${_SERVICE_NAME}"]
+    args: ["push", "${_REPO_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${_IMAGE_TAG}"]
 
 substitutions:
-  _PROJECT_ID: PROJECT-ID
-  _SERVICE_NAME: SERVICE-NAME
   # http://cloud/sdk/docs/release-notes ( i/e: 437.0.1 )
   _CLOUDSDK_VERSION: 459.0.0
   # https://github.com/GoogleCloudPlatform/cloud-sql-proxy/releases ( i/e: 2.4.0 )
