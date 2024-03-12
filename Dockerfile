@@ -20,7 +20,7 @@ RUN apk add busybox-extras net-tools bind-tools iproute2 curl tmux git \
     bc traceroute tcptraceroute tcpdump mtr nmap redis python3 py3-pip
 RUN wget -P /usr/bin http://www.vdberg.org/~richard/tcpping
 RUN chmod a+rx /usr/bin/tcpping
-RUN python -m pip install httpie webssh
+RUN python -m pip install --break-system-packages httpie webssh
 
 RUN wget -P / https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${CLOUDSDK_VERSION}-linux-x86_64.tar.gz
 RUN tar -xzvf /google-cloud-cli-${CLOUDSDK_VERSION}-linux-x86_64.tar.gz -C / \
@@ -48,4 +48,4 @@ RUN echo -n "${HTTP_PORT}" > /http.port
 EXPOSE ${HTTP_PORT}/tcp
 
 # web ssh terminal: https://github.com/huashengdun/webssh
-CMD ["/bin/bash", "-c", "export HTTP_PORT=$(cat /http.port) && exec wssh --port=${HTTP_PORT} --xheaders=False"]
+CMD ["/bin/bash", "-c", "export HTTP_PORT=$(cat /http.port | tr -d '\n') && exec wssh --port=${HTTP_PORT} --xheaders=False"]
