@@ -28,10 +28,12 @@ gcloud run deploy ${SERVICE_NAME} --image=${IMAGE_URI} \
 
     > see: https://cloud.google.com/sdk/gcloud/reference/run/services/proxy
 
+2. use a WEB Browser, got to: `http://127.0.0.1:8080/`
+
 2. Fill in the following fields:
-    - Hostname: `127.0.0.1` (fixed)
-    - Port: `2222` (fixed)
-    - Username: $_USER_NAME # identical to the value in cloudbuild.yaml
-    - Password: $_USER_PASS # identical to the value in cloudbuild.yaml
+    - Hostname: `127.0.0.1` _(fixed)_
+    - Port: `2222` _(fixed)_
+    - Username: `$_USER_NAME` # identical to the value in cloudbuild.yaml
+    - Password: `$_USER_PASS` # identical to the value in cloudbuild.yaml
 
 3. Click `Connect`
