@@ -2,12 +2,30 @@
 
 ## Building the image
 
+### Using Docker
+
+Populate the variables and run the command:
+
+```sh
+docker build -t <image-name>:<image-tag> \
+  --build-arg CLOUDSDK_VERSION=459.0.0 \
+  --build-arg CSQL_PROXY_VERSION=2.8.1 \
+  --build-arg ALLOYDB_PROXY_VERSION=1.6.1 \
+  --build-arg USQL_VERSION=0.17.5 \
+  --build-arg SERVICE_PORT=8080 \
+  --build-arg SSH_USER=user \
+  --build-arg SSH_PASS=123123 \
+  . 
+```
+
+### Using Cloud Build
+
 ```sh
 gcloud builds submit --config cloudbuild.yaml \
 --substitutions '_REPO_LOCATION=<repo-location>,_REPO_NAME=<repo-name>,_IMAGE_NAME=<image-name>,_IMAGE_TAG=<image-tag>,_BUILD_TAG=<build-tag>' .
 ```
 
-## Deploying the image
+## Deploying the image to Cloud Run
 
 ```sh
 export SERVICE_NAME='<service-name>'
@@ -28,7 +46,7 @@ gcloud run deploy ${SERVICE_NAME} --image=${IMAGE_URI} \
 
     > see: https://cloud.google.com/sdk/gcloud/reference/run/services/proxy
 
-2. use a WEB Browser, got to: `http://127.0.0.1:8080/`
+2. Use a WEB Browser, got to: `http://127.0.0.1:8080/`
 
 2. Fill in the following fields:
     - Hostname: `127.0.0.1` _(fixed)_
