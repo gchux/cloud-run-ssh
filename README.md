@@ -24,16 +24,6 @@ docker build -t <image-name>:<image-tag> \
 gcloud builds submit --config cloudbuild.yaml \
 --substitutions '_REPO_LOCATION=<repo-location>,_REPO_NAME=<repo-name>,_IMAGE_NAME=<image-name>,_IMAGE_TAG=<image-tag>,_BUILD_TAG=<build-tag>' .
 ```
-## (Optional) Using dynamic credentials
-
-### Generating credentials
-Instead of using the default (weak) provided values for the username and password, we can generate a username with `uuidgen` and a password with `openssl rand`.
-
-```sh
-chmod +x generate_credentials.sh
-./generate_credentials.sh 
-```
-Place the output values in the `cloudbuild.yaml`'s `_USER_NAME` and `_USER_PASS`.
 
 ## Deploying the image to Cloud Run
 
@@ -65,6 +55,3 @@ gcloud run deploy ${SERVICE_NAME} --image=${IMAGE_URI} \
     - Password: `$_USER_PASS` # identical to the value in cloudbuild.yaml
 
 3. Click `Connect`
-
-## References
-- https://www.openssl.org/docs/man1.1.1/man1/rand.html
