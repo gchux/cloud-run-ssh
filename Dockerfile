@@ -17,7 +17,7 @@ ENV HTTP_PORT=${SERVICE_PORT}
 
 RUN apk update
 RUN apk add busybox-extras net-tools bind-tools iproute2 curl tmux git \
-    bc traceroute tcptraceroute tcpdump mtr nmap redis python3 py3-pip
+    bc traceroute tcptraceroute tcpdump mtr nmap redis python3-dev py3-pip gcc libc-dev libffi-dev
 RUN wget -P /usr/bin http://www.vdberg.org/~richard/tcpping
 RUN chmod a+rx /usr/bin/tcpping
 RUN python -m pip install --break-system-packages httpie webssh
