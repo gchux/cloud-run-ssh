@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -x
+
+export HTTP_PORT=$(cat /http.port | tr -d '\n')
+
+echo "login using: ${USER_NAME}/${USER_PASSWORD}"
+
+# web ssh terminal: https://github.com/huashengdun/webssh
+exec env wssh --address='0.0.0.0' --port=${HTTP_PORT} \
+  --encoding='utf-8' --xheaders=True --debug=True \
+  --origin='*' --policy=autoadd --log-to-stderr \
+  --logging=debug --fbidhttp=False --maxconn=10 --xsrf=False

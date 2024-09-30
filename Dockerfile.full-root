@@ -18,8 +18,8 @@ FROM --platform=linux/amd64 linuxserver/openssh-server
 # the base image: https://github.com/linuxserver/docker-openssh-server
 
 ARG WEB_PORT
-ARG SSH_USER
-ARG SSH_PASS
+ARG SSH_USER="root"
+ARG SSH_PASS="pass"
 
 ARG CLOUDSDK_VERSION
 ARG CSQL_PROXY_VERSION
@@ -43,7 +43,9 @@ USER 0:0
 RUN apk update && apk add dpkg fuse vim busybox-extras net-tools bind-tools iproute2 \
     curl tmux git bc traceroute tcptraceroute tcpdump mtr nmap redis \
     python3-dev py3-pip gcc libc-dev libffi-dev
+
 RUN wget -P /usr/bin http://www.vdberg.org/~richard/tcpping && chmod a+rx /usr/bin/tcpping
+
 RUN python -m pip install --break-system-packages httpie webssh
 
 RUN curl -o /gcsfuse.deb -L https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v${GCSFUSE_VERSION}/gcsfuse_${GCSFUSE_VERSION}_amd64.deb \
@@ -74,5 +76,6 @@ EXPOSE ${HTTP_PORT}/tcp
 
 RUN if [[ "${USER_NAME}" == "root" ]] ; then echo "root:${USER_PASSWORD}" | chpasswd && echo -e '\nPermitRootLogin yes' >> /etc/ssh/sshd_config; fi
 
-# web ssh terminal: https://github.com/huashengdun/webssh
-CMD ["/bin/bash", "-c", "export HTTP_PORT=$(cat /http.port | tr -d '\n') && exec env wssh --address='0.0.0.0' --port=${HTTP_PORT} --encoding='utf-8' --xheaders=True --debug=True --origin='*' --policy=autoadd --log-to-stderr --logging=debug --fbidhttp=False --maxconn=10 --xsrf=False"]
+COPY ./init /init-wssh
+
+CMD ["/init-wssh"]

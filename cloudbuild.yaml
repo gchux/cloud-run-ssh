@@ -1,22 +1,26 @@
 steps:
   - id: "build ssh-server image"
-    name: 'gcr.io/cloud-builders/docker'
+    name: "gcr.io/cloud-builders/docker"
     args:
-      - 'build'
-      - '--platform=linux/amd64'
-      - '--file=Dockerfile'
-      - '-t'
-      - '${_REPO_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${_IMAGE_TAG}'
-      - '--no-cache'
-      - '--build-arg=GCSFUSE_VERSION=${_GCSFUSE_VERSION}'
-      - '--build-arg=WEB_PORT=${_WEB_PORT}'
-      - '--build-arg=SSH_USER=${_SSH_USER}'
-      - '--build-arg=SSH_PASS=${_SSH_PASS}'
-      - '.'
-images: ['${_REPO_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${_IMAGE_TAG}']
+      - "buildx"
+      - "build"
+      - "--no-cache"
+      - "--platform=linux/amd64"
+      - "--file=Dockerfile.${_DOCKERFILE}"
+      - "--tag"
+      - "${_REPO_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${_IMAGE_TAG}"
+      - "--build-arg=GCSFUSE_VERSION=${_GCSFUSE_VERSION}"
+      - "--build-arg=WEB_PORT=${_WEB_PORT}"
+      - "--build-arg=SSH_USER=${_SSH_USER}"
+      - "--build-arg=SSH_PASS=${_SSH_PASS}"
+      - "."
+images:
+  [
+    "${_REPO_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${_IMAGE_TAG}",
+  ]
 substitutions:
   _GCSFUSE_VERSION: 2.1.0
-  _WEB_PORT: '8080' # Choose a port
-  _SSH_USER: 'root' # Choose a username
-  _SSH_PASS: 'root' # Choose a password
-tags: ['ssh', '${_BUILD_TAG}']
+  _WEB_PORT: "8080" # Choose a port
+  _SSH_USER: "root" # Choose a username
+  _SSH_PASS: "root" # Choose a password
+tags: ["ssh", "${_BUILD_TAG}"]
