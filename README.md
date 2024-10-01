@@ -63,7 +63,7 @@ source $(pwd)/.env
 ```
 
 > [!NOTE]
-> creating a copy of `env.sample` with yout custom configuration is the better approach as you can expand this pattern to multiple `env files` to create various builds.
+> creating a copy of `env.sample` with your custom configuration is the better approach as you can expand this pattern to multiple `env files` in order to create various builds.
 
 ### Using Docker
 
@@ -105,9 +105,8 @@ $(pwd)
 ## Deploying the image to Cloud Run
 
 ```sh
-export SERVICE_NAME='<service-name>'
-export SERVICE_REGION=""
-export IMAGE_URI='<image-uri>'
+export SERVICE_NAME='...'
+export SERVICE_REGION='...'
 
 gcloud run deploy ${SERVICE_NAME} --image=${IMAGE_URI_FULL} \
 --region=${SERVICE_REGION} --port=8080 --min-instances=0 \
