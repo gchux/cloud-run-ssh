@@ -31,11 +31,28 @@ docker buildx build --no-cache \
 
 ### Using Cloud Build
 
+Adjust environment variables as per your requirements:
+
 ```sh
 export DOCKERFILE='<lite-or-fill>-[no-]root'
 
+export CLOUDSDK_VERSION='...'      # see: https://console.cloud.google.com/storage/browser/cloud-sdk-release
+export GCSFUSE_VERSION='...'       # see: https://github.com/GoogleCloudPlatform/gcsfuse/releases
+export CSQL_PROXY_VERSION='...'    # see: https://github.com/GoogleCloudPlatform/cloud-sql-proxy/releases
+export ALLOYDB_PROXY_VERSION='...' # see: https://github.com/GoogleCloudPlatform/alloydb-auth-proxy/releases
+
+export USQL_VERSION='...'          # see: https://github.com/xo/usql/releases
+
+export REPO_LOCATION='...'         # Artifact Registry docker repository location
+export REPO_NAME='...'             # Artifact Registry docker repository name
+export IMAGE_NAME='cloud-run-ssh'
+export IMAGE_TAG='latest'
+export BUILD_TAG='...'             # whatever tag you may/need to use
+export SSH_USER='user'             # whatever user you want to use to login into the SSH server
+export SSH_USER='pass'             # whatever password you want to use to login into the SSH server
+
 gcloud builds submit --config cloudbuild.yaml \
---substitutions "_REPO_LOCATION=<repo-location>,_REPO_NAME=<repo-name>,_IMAGE_NAME=<image-name>,_IMAGE_TAG=<image-tag>,_BUILD_TAG=<build-tag>,_WEB_PORT=8080,_SSH_USER=<username>,_SSH_PASS=<password>,_DOCKERFILE=${DOCKERFILE}" .
+--substitutions "_REPO_LOCATION=${REPO_LOCATION},_REPO_NAME=${REPO_LOCATION},_IMAGE_NAME=${IMAGE_NAME},_IMAGE_TAG=${IMAGE_TAG},_BUILD_TAG=${BUILD_TAG},_WEB_PORT=8080,_SSH_USER=${SSH_USER},_SSH_PASS=${SSH_PASS},_CLOUDSDK_VERSION=${CLOUDSDK_VERSION},_GCSFUSE_VERSION=${GCSFUSE_VERSION},_CSQL_PROXY_VERSION=${CSQL_PROXY_VERSION},_ALLOYDB_PROXY_VERSION=${ALLOYDB_PROXY_VERSION},_USQL_VERSION=${USQL_VERSION},_DOCKERFILE=${DOCKERFILE}" .
 ```
 
 ## Deploying the image to Cloud Run
