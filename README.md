@@ -194,5 +194,5 @@ gcloud run deploy ${SERVICE_NAME} \
 
   - Leverage the SSH server `AuthorizedKeysFile` config by mounting a secret volume at: `/wssh/secrets/1/authorized_keys`
 
-  > [!TIP]
-  > In order to avoid having to handle access management for all users, it is better/simpler to provide `user`, `password`, `Public key` and `authorized_keys` as secrets via environment variable or volume mounts.
+> [!TIP]
+> In order to avoid having to handle access management for all users, it is better/simpler to provide `user`, `password`, `Public key` and `authorized_keys` as secrets via environment variable or volume mounts.
