@@ -6,10 +6,10 @@ During development and while troubleshooting issues, it is often very useful to 
 
 The **`Cloud Run SSH server`** aims to provide full linux shell running in a Cloud Run service instance to allow developers and administrators to test and troubleshoot all kinds of scenarios.
 
-## Building bloxks:
+## Building Blocks:
 
-- [docker-openssh-server](https://github.com/linuxserver/docker-openssh-server)
-- [webssh](https://pypi.org/project/webssh/)
+- [docker-openssh-server](https://github.com/linuxserver/docker-openssh-server): provides the SSH server.
+- [webssh](https://pypi.org/project/webssh/): provides web access to the SSH server and a browser based shell to execute commands.
 
 ## Image flavors
 
