@@ -1,4 +1,15 @@
-# Cloud Run SSH image
+# Cloud Run SSH server
+
+## Motivation
+
+During development and while troubleshooting issues, it is often very useful to test some preconditions in the same execution environment as the microservice while having more maneuverability.
+
+The **`Cloud Run SSH server`** aims to provide full linux shell running in a Cloud Run service instance to allow developers and administrators to test and troubleshoot all kinds of scenarios.
+
+## Building bloxks:
+
+- [docker-openssh-server](https://github.com/linuxserver/docker-openssh-server)
+- [webssh](https://pypi.org/project/webssh/)
 
 ## Image flavors
 
@@ -73,7 +84,7 @@ source $(pwd)/.env
 Populate the variables and run the command:
 
 ```sh
-./docker_build ${CONTENT_FLAVOR} ${ACCESS_LEVEL} ${IMAGE_URI_BASE} ${SSH_USER} ${SSH_PASS} ${WEB_PORT}
+./docker_build
 ```
 
 alternatively, you may run the `docker` command directly:
@@ -117,11 +128,14 @@ $(pwd)
 export SERVICE_NAME='...'
 export SERVICE_REGION='...'
 
-gcloud run deploy ${SERVICE_NAME} --image=${IMAGE_URI_FULL} \
-   --region=${SERVICE_REGION} --port=8080 --min-instances=0 \
-   --max-instances=1 --timeout=3600s --no-use-http2 \
-   --session-affinity --memory=2Gi --cpu=2 --cpu-boost \
-   --no-cpu-throttling --execution-environment=gen2 \
+gcloud run deploy ${SERVICE_NAME} \
+   --image=${IMAGE_URI_FULL} \
+   --region=${SERVICE_REGION} \
+   --port=8080 --execution-environment=gen2 \
+   --min-instances=0 --max-instances=1 \
+   --memory=2Gi --cpu=2 --cpu-boost \
+   --timeout=3600s --no-use-http2 \
+   --session-affinity --no-cpu-throttling \
    --set-env-vars="SUDO_ACCESS=${SUDO_ACCESS},PASSWORD_ACCESS=true,LOG_STDOUT=true" \
    --no-allow-unauthenticated
 ```
@@ -145,3 +159,40 @@ gcloud run deploy ${SERVICE_NAME} --image=${IMAGE_URI_FULL} \
    - Password: `${SSH_PASS}`
 
 4. Click `Connect`
+
+## Advanced Configurations
+
+- Use `SUDO_ACCESS=true` if you want to allow users to escalate privileges without allowing `root` to login.
+
+- At container execution time, it is possible to override the following parameters:
+
+  - `SSH_PASS`: expose a secret using the environment variable `USER_PASSWORD`,
+
+    - alternatively, mount a secret volume for a file containing the password at directory: `/wssh/secrets/2/`, and then:
+
+      - define the environment variable `USER_PASSWORD_FILE` containing the exact file path; i/e: `/wssh/secrets/2/user_password`.
+
+  - `SSH_USER`: use the environment variable `USER_NAME`; this environment variable may also be defined using a secret.
+
+- When using public key authentication, you may use the following alternatives to provide Public keys:
+
+  - Mount a secret volume for the Public key file that should have access at directory `/wssh/secrets/3/`, and then:
+
+    - define the environment variable `PUBLIC_KEY_FILE` containing the exact file path; i/e: `/wssh/secrets/3/public_key`.
+
+    > see: https://cloud.google.com/run/docs/configuring/services/secrets
+
+  - Mount a GCS volume containing all Public keys that should have access, and then:
+
+    - define its path using the environment variable `PUBLIC_KEY_DIR`.
+
+    > see: https://cloud.google.com/run/docs/configuring/services/cloud-storage-volume-mounts
+
+  - Serve an HTTP(S) accessible key file containing all the Public keys that should have access,
+
+    - and define its full URL using the environment variable `PUBLIC_KEY_URL`.
+
+  - Leverage the SSH server `AuthorizedKeysFile` config by mounting a secret volume at: `/wssh/secrets/1/authorized_keys`
+
+  > [!TIP]
+  > In order to avoid having to handle access management for all users, it is better/simpler to provide `user`, `password`, `Public key` and `authorized_keys` as secrets via environment variable or volume mounts.

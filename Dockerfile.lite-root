@@ -56,17 +56,22 @@ RUN curl -o /gcsfuse.deb -L \
 
 RUN echo -n "${HTTP_PORT}" > /http.port
 
+# see: https://github.com/linuxserver/docker-openssh-server?tab=readme-ov-file#application-setup
+RUN if [[ -f /authorized_keys ]] ; then mkdir -p /config/.ssh/ \
+    && cat /authorized_keys >> /config/.ssh/authorized_keys \
+    && mkdir -p /wssh/secrets/1 \
+    && mkdir -p /wssh/secrets/2 \
+    && mkdir -p /wssh/secrets/3 \
+    && cat /authorized_keys > /wssh/secrets/1/authorized_keys \
+    ; fi
+
 RUN if [[ "${USER_NAME}" == "root" ]] ; then \
     echo "root:${USER_PASSWORD}" | chpasswd \
     && sed --in-place '/PermitRootLogin/d' /etc/ssh/sshd_config \
     && sed --in-place '/AuthorizedKeysFile/d' /etc/ssh/sshd_config \
     && echo -e '\nPermitRootLogin yes' >> /etc/ssh/sshd_config \
-    && echo -e '\nAuthorizedKeysFile /authorized_keys' >> /etc/ssh/sshd_config \
+    && echo -e '\nAuthorizedKeysFile /wssh/secrets/1/authorized_keys' >> /etc/ssh/sshd_config \
     ; fi
-
-# see: https://github.com/linuxserver/docker-openssh-server?tab=readme-ov-file#application-setup
-RUN if [[ -f /authorized_keys ]] ; then mkdir -p /config/.ssh/ \
-    && cat /authorized_keys >> /config/.ssh/authorized_keys ; fi
 
 EXPOSE ${WEB_PORT}/tcp
 
