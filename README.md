@@ -118,12 +118,12 @@ export SERVICE_NAME='...'
 export SERVICE_REGION='...'
 
 gcloud run deploy ${SERVICE_NAME} --image=${IMAGE_URI_FULL} \
---region=${SERVICE_REGION} --port=8080 --min-instances=0 \
---max-instances=1 --timeout=3600s --no-use-http2 \
---session-affinity --memory=2Gi --cpu=2 --cpu-boost \
---no-cpu-throttling --execution-environment=gen2 \
---set-env-vars="SUDO_ACCESS=${SUDO_ACCESS},PASSWORD_ACCESS=true,LOG_STDOUT=true" \
---no-allow-unauthenticated
+   --region=${SERVICE_REGION} --port=8080 --min-instances=0 \
+   --max-instances=1 --timeout=3600s --no-use-http2 \
+   --session-affinity --memory=2Gi --cpu=2 --cpu-boost \
+   --no-cpu-throttling --execution-environment=gen2 \
+   --set-env-vars="SUDO_ACCESS=${SUDO_ACCESS},PASSWORD_ACCESS=true,LOG_STDOUT=true" \
+   --no-allow-unauthenticated
 ```
 
 > [!CAUTION]
