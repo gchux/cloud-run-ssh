@@ -6,7 +6,7 @@ steps:
       - "build"
       - "--no-cache"
       - "--platform=linux/amd64"
-      - "--file=Dockerfile.${_DOCKERFILE}"
+      - "--file=${_DOCKERFILE}"
       - "--tag"
       - "${_REPO_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/${_IMAGE_NAME}:${_IMAGE_TAG}"
       - "--build-arg=WEB_PORT=${_WEB_PORT}"
