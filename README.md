@@ -35,7 +35,7 @@ export ALLOYDB_PROXY_VERSION='...' # see: https://github.com/GoogleCloudPlatform
 export USQL_VERSION='...'          # see: https://github.com/xo/usql/releases
 
 export SSH_USER='user'             # whatever user you want to use to login into the SSH server
-export SSH_USER='pass'             # whatever password you want to use to login into the SSH server
+export SSH_PASS='pass'             # whatever password you want to use to login into the SSH server
 
 export WEB_PORT=8080               # whatever TCP port you want to use to server the WEB SSH server
 
@@ -82,7 +82,7 @@ docker buildx build --no-cache \
   --file=$(pwd)/${DOCKERFILE} \
   --tag="${IMAGE_URI_FULL}" \
   --build-arg="SSH_USER=${SSH_USER}" \
-  --build-arg="SSH_PASS=${SSH_PASSP}" \
+  --build-arg="SSH_PASS=${SSH_PASS}" \
   --build-arg="WEB_PORT=8080" \
   --build-arg="GCSFUSE_VERSION=${GCSFUSE_VERSION}" \
   --build-arg="CLOUDSDK_VERSION=${CLOUDSDK_VERSION}" \
