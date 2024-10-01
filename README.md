@@ -35,7 +35,7 @@ docker buildx build --no-cache \
 export DOCKERFILE='<lite-or-fill>-[no-]root'
 
 gcloud builds submit --config cloudbuild.yaml \
---substitutions _REPO_LOCATION=<repo-location>,_REPO_NAME=<repo-name>,_IMAGE_NAME=<image-name>,_IMAGE_TAG=<image-tag>,_BUILD_TAG=<build-tag>,_WEB_PORT=8080,_SSH_USER=<username>,_SSH_PASS=<password>,_DOCKERFILE=${DOCKERFILE}" .
+--substitutions "_REPO_LOCATION=<repo-location>,_REPO_NAME=<repo-name>,_IMAGE_NAME=<image-name>,_IMAGE_TAG=<image-tag>,_BUILD_TAG=<build-tag>,_WEB_PORT=8080,_SSH_USER=<username>,_SSH_PASS=<password>,_DOCKERFILE=${DOCKERFILE}" .
 ```
 
 ## Deploying the image to Cloud Run
