@@ -2,7 +2,21 @@
 
 set -x
 
-source $(pwd)/.env
+if [ -f $(pwd)/.env ]; then
+  source $(pwd)/.env
+fi
+
+KEYS_DIR="$(pwd)/keys"
+mkdir -p ${KEYS_DIR}
+if [ "${CREATE_KEY_PAIR}" == "true" ]; then
+  ssh-keygen -f ${KEYS_DIR}/id_ecdsa -t ed25519 -C "${SSH_USER}@cloud-run-ssh"
+  cat ${KEYS_DIR}/id_ecdsa
+else
+  touch ${KEYS_DIR}/id_fake
+  touch ${KEYS_DIR}/id_fake.pub
+fi
+cat ${KEYS_DIR}/*.pub > ${KEYS_DIR}/authorized_keys
+cat -n ${KEYS_DIR}/authorized_keys
 
 DOCKER_LOCAL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
 DOCKER_REMOTE_IMAGE="${IMAGE_URI_BASE}/${DOCKER_LOCAL_IMAGE}"
@@ -24,6 +38,8 @@ docker buildx build --no-cache \
   --build-arg="SSH_USER=${SSH_USER}" \
   --build-arg="SSH_PASS=${SSH_PASS}" \
   --build-arg="WEB_PORT=${WEB_PORT}" \
+  --build-arg="PASSWORD_ACCESS=${PASSWORD_ACCESS}" \
+  --build-arg="SUDO_ACCESS=${SUDO_ACCESS}" \
   $(pwd)
 
 docker tag ${DOCKER_LOCAL_IMAGE} ${DOCKER_REMOTE_IMAGE}

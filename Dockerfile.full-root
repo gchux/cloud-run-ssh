@@ -15,11 +15,13 @@
 # limitations under the License.
 
 FROM --platform=linux/amd64 linuxserver/openssh-server
-# the base image: https://github.com/linuxserver/docker-openssh-server
+# base image: https://github.com/linuxserver/docker-openssh-server
 
 ARG WEB_PORT
 ARG SSH_USER="root"
 ARG SSH_PASS="pass"
+ARG PASSWORD_ACCESS="true"
+ARG SUDO_ACCESS="true"
 
 ARG CLOUDSDK_VERSION
 ARG CSQL_PROXY_VERSION
@@ -31,14 +33,17 @@ ENV USER_NAME=${SSH_USER}
 ENV USER_PASSWORD=${SSH_PASS}
 ENV HTTP_PORT=${WEB_PORT}
 
-ENV SUDO_ACCESS=true
-ENV PASSWORD_ACCESS=true
+ENV PASSWORD_ACCESS=${PASSWORD_ACCESS}
+ENV SUDO_ACCESS=${SUDO_ACCESS}
 ENV LOG_STDOUT=true
 
 ENV PUID=0
 ENV PGID=0
 
 USER 0:0
+
+COPY init-wssh keys/authorized_keys* /
+COPY keys/*.pub /pubkeys/
 
 RUN apk update && apk add dpkg fuse vim busybox-extras net-tools bind-tools iproute2 \
     curl tmux git bc traceroute tcptraceroute tcpdump mtr nmap redis \
@@ -72,10 +77,18 @@ RUN wget -P / https://github.com/xo/usql/releases/download/v${USQL_VERSION}/usql
 
 RUN echo -n "${HTTP_PORT}" > /http.port
 
+RUN if [[ "${USER_NAME}" == "root" ]] ; then \
+    echo "root:${USER_PASSWORD}" | chpasswd \
+    && sed --in-place '/PermitRootLogin/d' /etc/ssh/sshd_config \
+    && sed --in-place '/AuthorizedKeysFile/d' /etc/ssh/sshd_config \
+    && echo -e '\nPermitRootLogin yes' >> /etc/ssh/sshd_config \
+    && echo -e '\nAuthorizedKeysFile /authorized_keys' >> /etc/ssh/sshd_config \
+    ; fi
+
+# see: https://github.com/linuxserver/docker-openssh-server?tab=readme-ov-file#application-setup
+RUN if [[ -f /authorized_keys ]]; then mkdir -p /config/.ssh/ \
+    && cat /authorized_keys >> /config/.ssh/authorized_keys; fi
+
 EXPOSE ${HTTP_PORT}/tcp
-
-RUN if [[ "${USER_NAME}" == "root" ]] ; then echo "root:${USER_PASSWORD}" | chpasswd && echo -e '\nPermitRootLogin yes' >> /etc/ssh/sshd_config; fi
-
-COPY ./init /init-wssh
 
 CMD ["/init-wssh"]

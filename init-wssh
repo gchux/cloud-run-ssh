@@ -9,5 +9,6 @@ echo "login using: ${USER_NAME}/${USER_PASSWORD}"
 # web ssh terminal: https://github.com/huashengdun/webssh
 exec env wssh --address='0.0.0.0' --port=${HTTP_PORT} \
   --encoding='utf-8' --xheaders=True --debug=True \
-  --origin='*' --policy=autoadd --log-to-stderr \
-  --logging=debug --fbidhttp=False --maxconn=10 --xsrf=False
+  --origin='*' --policy=autoadd --log_to_stderr \
+  --logging=debug --redirect=False --fbidhttp=False \
+  --wpintvl=5 --maxconn=10 --xsrf=False

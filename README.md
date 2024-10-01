@@ -25,6 +25,9 @@
 ```sh
 export CONTENT_FLAVOR='...'        # `lite` or `full` depending on the required tooling
 export ACCESS_LEVEL='...'          # `root` or `no-root` depending on the required access level
+
+export CREATE_KEY_PAIR='false'     # when using `docker_build`, whether to create a new KEY pair
+export PASSWORD_ACCESS='true'      # allows to disable password authentication if KEY based auth is preferred
 export SUDO_ACCESS='false'         # `true`/`false` depending on access level selection
 
 export CLOUDSDK_VERSION='...'      # see: https://console.cloud.google.com/storage/browser/cloud-sdk-release
@@ -101,8 +104,8 @@ docker buildx build \
 Adjust environment variables as per your requirements:
 
 ```sh
-gcloud builds submit --config cloudbuild.yaml \
---substitutions "_REPO_LOCATION=${REPO_LOCATION},_REPO_NAME=${REPO_NAME},_IMAGE_NAME=${IMAGE_NAME},_IMAGE_TAG=${IMAGE_TAG},_BUILD_TAG=${BUILD_TAG},_WEB_PORT=${WEB_PORT},_SSH_USER=${SSH_USER},_SSH_PASS=${SSH_PASS},_CLOUDSDK_VERSION=${CLOUDSDK_VERSION},_GCSFUSE_VERSION=${GCSFUSE_VERSION},_CSQL_PROXY_VERSION=${CSQL_PROXY_VERSION},_ALLOYDB_PROXY_VERSION=${ALLOYDB_PROXY_VERSION},_USQL_VERSION=${USQL_VERSION},_DOCKERFILE=${DOCKERFILE}" \
+gcloud builds submit --config $(pwd)/cloudbuild.yaml \
+--substitutions "_REPO_LOCATION=${REPO_LOCATION},_REPO_NAME=${REPO_NAME},_IMAGE_NAME=${IMAGE_NAME},_IMAGE_TAG=${IMAGE_TAG},_BUILD_TAG=${BUILD_TAG},_WEB_PORT=${WEB_PORT},_SSH_USER=${SSH_USER},_SSH_PASS=${SSH_PASS},_PASSWORD_ACCESS=${PASSWORD_ACCESS},_SUDO_ACCESS=${SUDO_ACCESS},_CLOUDSDK_VERSION=${CLOUDSDK_VERSION},_GCSFUSE_VERSION=${GCSFUSE_VERSION},_CSQL_PROXY_VERSION=${CSQL_PROXY_VERSION},_ALLOYDB_PROXY_VERSION=${ALLOYDB_PROXY_VERSION},_USQL_VERSION=${USQL_VERSION},_DOCKERFILE=${DOCKERFILE}" \
 $(pwd)
 ```
 
