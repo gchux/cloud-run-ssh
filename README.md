@@ -21,10 +21,10 @@
 
 ```sh
 export CONTENT_FLAVOR='...'        # `lite` or `full` depending on the required tooling
-export ACCESS_LEVEL_FLAVOR='...'   # `root` or `no-root` depending on the required access level
+export ACCESS_LEVEL='...'          # `root` or `no-root` depending on the required access level
 
 export IMAGE_NAME='cloud-run-ssh'  # or whatever name you need/require to use for the Docker image
-export IMAGE_TAG="${CONTENT_FLAVOR}-${ACCESS_LEVEL_FLAVOR}"
+export IMAGE_TAG="${CONTENT_FLAVOR}-${ACCESS_LEVEL}"
 
 export DOCKERFILE="Dockerfile.${IMAGE_TAG}"
 
@@ -42,7 +42,7 @@ export SSH_USER='user'             # whatever user you want to use to login into
 export SSH_USER='pass'             # whatever password you want to use to login into the SSH server
 export WEB_PORT=8080               # whatever TCP port you want to use to server the WEB SSH server
 
-export SUDO_ACCESS='false'         # `true`/`false` depending on access level flavor selection
+export SUDO_ACCESS='false'         # `true`/`false` depending on access level selection
 
 export IMAGE_URI_BASE="${REPO_LOCATION}-docker.pkg-dev/${REPO_NAME}"
 export IMAGE_URI_FULL="${IMAGE_URI_BASE}/${IMAGE_NAME}:${IMAGE_TAG}"
@@ -53,7 +53,7 @@ export IMAGE_URI_FULL="${IMAGE_URI_BASE}/${IMAGE_NAME}:${IMAGE_TAG}"
 Populate the variables and run the command:
 
 ```sh
-./docker_build <lite-or-full> <[no-]root> ${IMAGE_URI_BASE} ${SSH_USER} ${SSH_PASS} ${WEB_PORT}
+./docker_build ${CONTENT_FLAVOR} ${ACCESS_LEVEL} ${IMAGE_URI_BASE} ${SSH_USER} ${SSH_PASS} ${WEB_PORT}
 ```
 
 alternatively, you may run the `docker` command directly:
