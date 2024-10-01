@@ -7,7 +7,7 @@
 Populate the variables and run the command:
 
 ```sh
-./docker_build <lite-or-full> <[no-]root> <docker-repo>
+./docker_build <lite-or-full> <[no-]root> <docker-repo> <ssh-user> <ssh-pass> <web-port>
 ```
 
 alternatively, you may run the `docker` command directly:

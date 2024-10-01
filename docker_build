@@ -1,6 +1,19 @@
 #!/bin/bash
 
-DOCKER_IMAGE_TAG="${1}-${2}"
+
+#########################################################
+#                       ARGUMENTS                       #
+#                                                       #
+# 1. type of image to build: `lite` or `full`           #
+# 2. access level within the image: `root` or `no-root` #
+# 3. Docker repository (without 'https://')             #
+# 4. SSH username to apply for login                    #
+# 5. SSH password to apply for login                    #
+# 6. WEB port where UI will be accepting connections    #
+#                                                       #
+#########################################################
+
+DOCKER_IMAGE_TAG="${1:-lite-no-root}-${2:-latest}"
 DOCKER_LOCAL_IMAGE="cloud-run-ssh:${DOCKER_IMAGE_TAG}"
 DOCKER_REMOTE_IMAGE="${3}/${DOCKER_LOCAL_IMAGE}"
 
@@ -15,9 +28,9 @@ docker buildx build --no-cache \
   --build-arg="CSQL_PROXY_VERSION=2.8.1" \
   --build-arg="ALLOYDB_PROXY_VERSION=1.6.1" \
   --build-arg="USQL_VERSION=0.17.5" \
-  --build-arg="SSH_USER=${4}" \
-  --build-arg="SSH_PASS=${5}" \
-  --build-arg="WEB_PORT=${6}" \
+  --build-arg="SSH_USER=${4:-user}" \
+  --build-arg="SSH_PASS=${5:-pass}" \
+  --build-arg="WEB_PORT=${6:-8080}" \
   $(pwd)
 
 docker tag ${DOCKER_LOCAL_IMAGE} ${DOCKER_REMOTE_IMAGE}
