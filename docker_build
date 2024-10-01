@@ -8,16 +8,16 @@ set -x
 
 docker buildx build --no-cache \
   --platform=linux/amd64 \
-  --file=$(pwd)/Dockerfile.${DOCKER_TAG} \
+  --file=$(pwd)/Dockerfile.${DOCKER_IMAGE_TAG} \
   --tag=${DOCKER_LOCAL_IMAGE} \
   --build-arg="GCSFUSE_VERSION=2.1.0" \
   --build-arg="CLOUDSDK_VERSION=459.0.0" \
   --build-arg="CSQL_PROXY_VERSION=2.8.1" \
   --build-arg="ALLOYDB_PROXY_VERSION=1.6.1" \
   --build-arg="USQL_VERSION=0.17.5" \
-  --build-arg="WEB_PORT=8080" \
-  --build-arg="SSH_USER=user" \
-  --build-arg="SSH_PASS=pass" \
+  --build-arg="SSH_USER=${4}" \
+  --build-arg="SSH_PASS=${5}" \
+  --build-arg="WEB_PORT=${6}" \
   $(pwd)
 
 docker tag ${DOCKER_LOCAL_IMAGE} ${DOCKER_REMOTE_IMAGE}
