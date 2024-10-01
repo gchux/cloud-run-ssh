@@ -77,7 +77,8 @@ alternatively, you may run the `docker` command directly:
 
 ```sh
 # update versions of dependencies
-docker buildx build --no-cache \
+docker buildx build \
+  --no-cache --push \
   --platform=linux/amd64 \
   --file=$(pwd)/${DOCKERFILE} \
   --tag="${IMAGE_URI_FULL}" \
@@ -91,6 +92,9 @@ docker buildx build --no-cache \
   --build-arg="USQL_VERSION=${USQL_VERSION}" \
   $(pwd)
 ```
+
+> [!NOTE]
+> see: https://cloud.google.com/artifact-registry/docs/docker/authentication
 
 ### Using Cloud Build
 
