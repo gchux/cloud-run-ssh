@@ -16,6 +16,11 @@ docker buildx build --no-cache \
   --build-arg="CSQL_PROXY_VERSION=${CSQL_PROXY_VERSION}" \
   --build-arg="ALLOYDB_PROXY_VERSION=${ALLOYDB_PROXY_VERSION}" \
   --build-arg="USQL_VERSION=${USQL_VERSION}" \
+  --label="GCSFUSE_VERSION=v${GCSFUSE_VERSION}" \
+  --label="CLOUDSDK_VERSION=v${CLOUDSDK_VERSION}" \
+  --label="CSQL_PROXY_VERSION=v${CSQL_PROXY_VERSION}" \
+  --label="ALLOYDB_PROXY_VERSION=v${ALLOYDB_PROXY_VERSION}" \
+  --label="USQL_VERSION=v${USQL_VERSION}" \
   --build-arg="SSH_USER=${SSH_USER}" \
   --build-arg="SSH_PASS=${SSH_PASS}" \
   --build-arg="WEB_PORT=${WEB_PORT}" \

@@ -83,7 +83,7 @@ docker buildx build --no-cache \
   --tag="${IMAGE_URI_FULL}" \
   --build-arg="SSH_USER=${SSH_USER}" \
   --build-arg="SSH_PASS=${SSH_PASS}" \
-  --build-arg="WEB_PORT=8080" \
+  --build-arg="WEB_PORT=${WEB_PORT}" \
   --build-arg="GCSFUSE_VERSION=${GCSFUSE_VERSION}" \
   --build-arg="CLOUDSDK_VERSION=${CLOUDSDK_VERSION}" \
   --build-arg="CSQL_PROXY_VERSION=${CSQL_PROXY_VERSION}" \
