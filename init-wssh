@@ -1,10 +1,27 @@
-#!/bin/bash
-
-set -x
+#!/usr/bin/with-contenv bash
 
 export HTTP_PORT=$(cat /http.port | tr -d '\n')
 
-echo "login using: ${USER_NAME}/${USER_PASSWORD}"
+MDS_URL='http://metadata.google.internal/computeMetadata/v1'
+MDS_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}"
+
+export PROJECT_ID=$(${MDS_CURL}/project/project-id)
+export PROJECT_NUM=$(${MDS_CURL}/project/numeric-project-id)
+_GCP_REGION=$(${MDS_CURL}/instance/region)
+export GCP_REGION=${_GCP_REGION##*/}
+export INSTANCE_ID=$(${MDS_CURL}/instance/id)
+
+SSH_SERVER_STATIC_PARAMS="hostname=localhost&port=2222&term=xterm-256color"
+
+export SSH_SERVER_URL="https://${K_SERVICE}-${PROJECT_NUM}.${GCP_REGION}.run.app"
+SSH_SERVER_TITLE="${PROJECT_ID}_${GCP_REGION}_${K_SERVICE}_${K_REVISION}"
+SSH_SERVER_PARAMS="${SSH_SERVER_STATIC_PARAMS}&username=${USER_NAME}&title=${SSH_SERVER_TITLE}"
+
+echo "credentials: ${USER_NAME}/${USER_PASSWORD}"
+
+echo "SSH Server URL: ${SSH_SERVER_URL}?${SSH_SERVER_PARAMS}"
+echo "SSH Server proxy command: gcloud run services proxy ${K_SERVICE} --region=${GCP_REGION} --port=${HTTP_PORT}"
+echo "SSH Server proxied URL: http://localhost:${HTTP_PORT}?${SSH_SERVER_PARAMS}"
 
 # web ssh terminal: https://github.com/huashengdun/webssh
 exec env wssh --address='0.0.0.0' --port=${HTTP_PORT} \

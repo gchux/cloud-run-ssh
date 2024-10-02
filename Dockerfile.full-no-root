@@ -91,4 +91,4 @@ RUN if [[ "${USER_NAME}" == "root" ]] ; then \
 
 EXPOSE ${WEB_PORT}/tcp
 
-CMD ["/init-wssh"]
+CMD ["exec", "env", "/init-wssh"]

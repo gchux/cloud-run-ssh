@@ -1,5 +1,7 @@
 # Cloud Run SSH server
 
+![cloud_run_ssh](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh.png?raw=true)
+
 ## Motivation
 
 During development and while troubleshooting issues, it is often very useful to test some preconditions in the same execution environment as the microservice while having more maneuverability.
