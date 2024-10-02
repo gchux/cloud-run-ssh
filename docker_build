@@ -2,8 +2,13 @@
 
 set -x
 
-if [ -f $(pwd)/.env ]; then
-  source $(pwd)/.env
+DEFAULT_ENV_FILE="$(pwd)/.env"
+ENV_FILE=${1:-$DEFAULT_ENV_FILE}
+
+echo "env: ${ENV_FILE}"
+
+if [ -f "${ENV_FILE}" ]; then
+  source ${ENV_FILE}
 fi
 
 KEYS_DIR="$(pwd)/keys"
