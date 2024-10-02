@@ -124,6 +124,17 @@ gcloud builds submit --config $(pwd)/cloudbuild.yaml \
 $(pwd)
 ```
 
+### Using pre-build images
+
+```sh
+docker pull ghcr.io/gchux/cloud-run-ssh:latest
+docker tag ghcr.io/gchux/cloud-run-ssh:latest ${IMAGE_URI_FULL}
+docker push ${IMAGE_URI_FULL}
+```
+
+> [!NOTE]
+> Docker image tag `latest` points to `CONTENT_FLAVOR=lite` and `ACCESS_LEVEL=no-root`
+
 ## Deploying the image to Cloud Run
 
 ```sh
