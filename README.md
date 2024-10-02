@@ -124,7 +124,7 @@ gcloud builds submit --config $(pwd)/cloudbuild.yaml \
 $(pwd)
 ```
 
-### Using pre-build images
+### Using pre-built images
 
 ```sh
 docker pull ghcr.io/gchux/cloud-run-ssh:latest
