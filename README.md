@@ -149,12 +149,15 @@ gcloud run deploy ${SERVICE_NAME} \
    --memory=2Gi --cpu=2 --cpu-boost \
    --timeout=3600s --no-use-http2 \
    --session-affinity --no-cpu-throttling \
-   --set-env-vars="SUDO_ACCESS=${SUDO_ACCESS},PASSWORD_ACCESS=true,LOG_STDOUT=true" \
+   --set-env-vars="SUDO_ACCESS=${SUDO_ACCESS},PASSWORD_ACCESS=${PASSWORD_ACCESS},LOG_STDOUT=true" \
    --no-allow-unauthenticated
 ```
 
 > [!CAUTION]
 > it is strongly recommended to use **`--no-allow-unauthenticated`** in order to prevent unauthorized access to the SSH server.
+
+> [!IMPORTANT]
+> if `gen1` is needed, then both `ACCESS_LEVEL`, `SSH_USER`/`USER_NAME` must be set to `root`.
 
 ## SSHing into the container
 
