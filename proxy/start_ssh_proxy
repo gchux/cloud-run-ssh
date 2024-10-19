@@ -1,0 +1,30 @@
+#! /bin/bash
+
+set -x
+
+DEFAULT_SSH_PROXY_REGISTRY_API_PORT=5000
+DEFAULT_SSH_PROXY_INGRESS_PORT=5555
+DEFAULT_SSH_PROXY_PORT=5050
+DEFAULT_SSH_PROXY_ID='00000000-0000-0000-0000-000000000000'
+
+sed -e "s|%SSH_PROXY_REGISTRY_API_PORT%|${SSH_PROXY_REGISTRY_API_PORT:-$DEFAULT_SSH_PROXY_REGISTRY_API_PORT}|g" \
+  -e "s|%SSH_PROXY_INGRESS_PORT%|${PROXY_INGRESS_PORT:-$DEFAULT_SSH_PROXY_INGRESS_PORT}|g" \
+  -e "s|%SSH_PROXY_PORT%|${SSH_PROXY_PORT:-$DEFAULT_SSH_PROXY_PORT}|g" \
+  -e "s|%SSH_PROXY_ID%|${SSH_PROXY_ID:-$DEFAULT_SSH_PROXY_ID}|g" \
+    /ssh_proxy.yaml > /tmp/ssh_proxy.yaml
+
+cat -n /tmp/ssh_proxy.yaml
+
+/ssh_proxy_registry -id=${SSH_PROXY_ID:-$DEFAULT_SSH_PROXY_ID} &
+export SSH_PROXY_REGISTRY_PID=$!
+
+trap 'kill -TERM $SSH_PROXY_PID' TERM INT
+/gost -D -C /tmp/ssh_proxy.yaml 2>&1 &
+export SSH_PROXY_PID=$!
+echo "[INFO] – SSH proxy started w/PID: ${SSH_PROXY_PID}"
+wait ${SSH_PROXY_PID}
+trap - TERM INT
+wait ${SSH_PROXY_PID}
+echo "[INFO] – SSH proxy ( PID: ${SSH_PROXY_PID} ) exited"
+
+kill -15 ${SSH_PROXY_REGISTRY_PID}
