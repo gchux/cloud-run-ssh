@@ -36,5 +36,5 @@ ingresses:
 
 tls:
   validity: 8760h
-  commonName: %SSH_PROXY_ID%.ssh-proxy.run.internal
+  commonName: %SSH_PROXY_ID%.ssh-proxy.internal
   organization: %SSH_PROXY_ID%

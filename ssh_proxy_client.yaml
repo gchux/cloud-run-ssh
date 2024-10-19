@@ -1,0 +1,30 @@
+services:
+  - name: %INSTANCE_ID%
+    addr: :0
+    handler:
+      type: rtcp
+    listener:
+      type: rtcp
+      chain: ssh-proxy
+    forwarder:
+      nodes:
+        - name: ssh-server
+          addr: 127.0.0.1:2222
+
+chains:
+  - name: ssh-proxy
+    hops:
+      - name: ssh-proxy
+        nodes:
+          - name: ssh-proxy-server
+            addr: %SSH_PROXY_HOST%:%SSH_PROXY_PORT%
+            connector:
+              type: tunnel
+              metadata:
+                tunnel.id: %SSH_PROXY_ID%
+                tunnel.weight: 1
+            dialer:
+              type: tls
+              tls:
+                secure: false
+                serverName: %SSH_PROXY_ID%.ssh-proxy.internal
