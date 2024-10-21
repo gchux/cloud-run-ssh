@@ -50,7 +50,9 @@ ARG BIN_NAME=ssh_registry
 
 COPY --from=builder /${BIN_NAME} /ssh_proxy_registry
 COPY --from=builder /gost /gost
-COPY ./ssh_proxy.yaml /ssh_proxy.yaml
-COPY ./start_ssh_proxy /start_ssh_proxy
+COPY ./ssh_proxy_server.yaml /ssh_proxy_server.yaml
+COPY ./start_ssh_proxy_server /start_ssh_proxy_server
 
-CMD ["/start_ssh_proxy"]
+ENTRYPOINT ["/start_ssh_proxy_server"]
+
+CMD ["/start_ssh_proxy_server"]

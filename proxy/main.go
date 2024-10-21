@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/alphadose/haxmap"
 	mapset "github.com/deckarep/golang-set/v2"
@@ -25,13 +24,17 @@ type (
 var id = flag.String("id", "", "allowed UUID to be registered")
 
 const (
-	xProjectId                  = "x-project-id"
-	xServerlessRegion           = "x-s8s-region"
-	xServerlessProjectId        = "x-s8s-project-id"
-	xServerlessService          = "x-s8s-service"
-	xServerlessRevision         = "x-s8s-revision"
-	xServerlessInstanceId       = "x-s8s-instance-id"
-	xServerlessSshId            = "x-s8s-ssh-id"
+	sshProxyServerNameTemplate = "%s.ssh-server.internal"
+
+	xProjectId            = "x-project-id"
+	xServerlessRegion     = "x-s8s-region"
+	xServerlessProjectId  = "x-s8s-project-id"
+	xServerlessService    = "x-s8s-service"
+	xServerlessRevision   = "x-s8s-revision"
+	xServerlessInstanceId = "x-s8s-instance-id"
+
+	xServerlessSshClientId      = "x-s8s-ssh-client-id"
+	xServerlessSshServerId      = "x-s8s-ssh-server-id"
 	xServerlessSshAuthorization = "x-s8s-ssh-authorization"
 
 	projectAPI  = "/project/:project"
@@ -50,38 +53,40 @@ var (
 	projectToRegionsMap    ProjectToRegionsMap    = haxmap.New[string, RegionToServicesMap]()
 )
 
-func idTokenVerifier(c *gin.Context) {
-	authorizationHeader := c.GetHeader(xServerlessSshAuthorization)
+func idTokenVerifier(id *string) func(*gin.Context) {
+	sshProxyServerName := fmt.Sprintf(sshProxyServerNameTemplate, *id)
 
-	if authorizationHeader == "" {
-		c.AbortWithStatus(http.StatusForbidden)
-		return
-	}
+	return func(c *gin.Context) {
+		sshServerID := c.GetHeader(xServerlessSshServerId)
 
-	authorizationHeaderParts := strings.Split(authorizationHeader, " ")
+		if sshServerID != *id {
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
 
-	if len(authorizationHeaderParts) != 2 ||
-		authorizationHeaderParts[0] != "Bearer" {
-		c.AbortWithStatus(http.StatusForbidden)
-		return
-	}
+		idToken := c.GetHeader(xServerlessSshAuthorization)
 
-	token := authorizationHeaderParts[1]
-	if token == "" {
-		c.AbortWithStatus(http.StatusForbidden)
-		return
-	}
+		if idToken == "" {
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
 
-	tokenValidator, err := idtoken.NewValidator(context.Background())
-	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
+		tokenValidator, err := idtoken.NewValidator(context.Background())
+		if err != nil {
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
 
-	_, err = tokenValidator.Validate(context.Background(), token, *id)
-	if err != nil {
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
+		payload, err := tokenValidator.Validate(context.Background(), idToken, *id)
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		if audience := payload.Audience; audience != sshProxyServerName {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 	}
 }
 
@@ -92,7 +97,7 @@ func getIngessRules(c *gin.Context) {
 	revisionToInstancesMap.ForEach(
 		func(revision string, instances mapset.Set[string]) bool {
 			instances.Each(func(instance string) bool {
-				fmt.Fprintf(c.Writer, "%s %s", instance, *id)
+				fmt.Fprintln(c.Writer, instance)
 				return false
 			})
 			return true
@@ -102,24 +107,24 @@ func getIngessRules(c *gin.Context) {
 func sendResponse(
 	c *gin.Context,
 	status int,
-	project, region, service, revision, instance string,
+	project, region, service, revision, instance, id *string,
 ) {
 	c.Status(status)
 
-	c.Header(xProjectId, project)
-	c.Header(xServerlessRegion, region)
-	c.Header(xServerlessService, service)
-	c.Header(xServerlessRevision, revision)
-	c.Header(xServerlessSshId, *id)
-	c.Header(xServerlessInstanceId, instance)
+	c.Header(xProjectId, *project)
+	c.Header(xServerlessRegion, *region)
+	c.Header(xServerlessService, *service)
+	c.Header(xServerlessRevision, *revision)
+	c.Header(xServerlessInstanceId, *instance)
+	c.Header(xServerlessSshClientId, *id)
 }
 
 func addInstance(c *gin.Context) {
-	_id := c.GetHeader(xServerlessSshId)
+	clientID := c.GetHeader(xServerlessSshClientId)
 
-	if _id == "" || _id != *id {
-		c.Status(http.StatusNotFound)
-		c.Header(xServerlessSshId, _id)
+	if clientID == "" {
+		c.Status(http.StatusBadRequest)
+		c.Header(xServerlessSshServerId, *id)
 		return
 	}
 
@@ -129,6 +134,8 @@ func addInstance(c *gin.Context) {
 	revision := c.Param("revision")
 	instance := c.Param("instance")
 
+	entry := fmt.Sprintf("%s %s", clientID, instance)
+
 	projectToRegionsMap.GetOrCompute(project,
 		func() RegionToServicesMap {
 			regionToServicesMap.GetOrCompute(region,
@@ -137,9 +144,9 @@ func addInstance(c *gin.Context) {
 						func() RevisionToInstancesMap {
 							if instances, loaded := revisionToInstancesMap.GetOrCompute(revision,
 								func() mapset.Set[string] {
-									return mapset.NewSet(instance)
+									return mapset.NewSet(entry)
 								}); loaded {
-								instances.Add(instance)
+								instances.Add(entry)
 							}
 							return revisionToInstancesMap
 						})
@@ -148,15 +155,16 @@ func addInstance(c *gin.Context) {
 			return regionToServicesMap
 		})
 
-	sendResponse(c, http.StatusAccepted, project, region, service, revision, instance)
+	sendResponse(c, http.StatusAccepted,
+		&project, &region, &service, &revision, &instance, &clientID)
 }
 
 func removeInstance(c *gin.Context) {
-	_id := c.GetHeader(xServerlessSshId)
+	clientID := c.GetHeader(xServerlessSshClientId)
 
-	if _id == "" || !strings.EqualFold(_id, *id) {
-		c.Status(http.StatusNotFound)
-		c.Header(_id, _id)
+	if clientID == "" {
+		c.Status(http.StatusBadRequest)
+		c.Header(xServerlessSshServerId, *id)
 		return
 	}
 
@@ -172,7 +180,8 @@ func removeInstance(c *gin.Context) {
 				if instances, ok := z.Get(revision); ok {
 					if instances.Contains(instance) {
 						instances.Remove(instance)
-						sendResponse(c, http.StatusAccepted, project, region, service, revision, instance)
+						sendResponse(c, http.StatusAccepted,
+							&project, &region, &service, &revision, &instance, &clientID)
 						return
 					}
 				}
@@ -180,7 +189,8 @@ func removeInstance(c *gin.Context) {
 		}
 	}
 
-	sendResponse(c, http.StatusNotFound, project, region, service, revision, instance)
+	sendResponse(c, http.StatusNotFound,
+		&project, &region, &service, &revision, &instance, &clientID)
 }
 
 func getProjectIngress(c *gin.Context) {
@@ -307,12 +317,12 @@ func main() {
 	externalAPI.SetTrustedProxies(nil)
 	internalAPI.SetTrustedProxies(nil)
 
-	externalAPI.GET("/", getIngessRules)
+	externalAPI.GET("/ingress", getIngessRules)
 
 	externalProjectAPI := externalAPI.Group(projectAPI)
 	internalProjectAPI := internalAPI.Group(projectAPI)
 
-	externalProjectAPI.Use(idTokenVerifier)
+	externalProjectAPI.Use(idTokenVerifier(id))
 
 	externalProjectAPI.GET("/", getProjectIngress)
 	internalProjectAPI.GET("/", getProjectIngress)

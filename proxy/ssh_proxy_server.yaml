@@ -30,8 +30,9 @@ recorders:
 
 ingresses:
   - name: ssh-proxy-ingress
+    reload: 5s
     http:
-      url: http://127.0.0.1:8888/
+      url: http://127.0.0.1:8888/ingress
       timeout: 10s
 
 tls:

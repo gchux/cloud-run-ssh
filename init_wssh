@@ -1,0 +1,69 @@
+#!/usr/bin/with-contenv bash
+
+set -x
+
+export HTTP_PORT=$(cat /http.port | tr -d '\n')
+
+MDS_URL='http://metadata.google.internal/computeMetadata/v1'
+MDS_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}"
+
+export PROJECT_ID=$(${MDS_CURL}/project/project-id)
+export PROJECT_NUM=$(${MDS_CURL}/project/numeric-project-id)
+_GCP_REGION=$(${MDS_CURL}/instance/region)
+export GCP_REGION=${_GCP_REGION##*/}
+export INSTANCE_ID=$(${MDS_CURL}/instance/id)
+
+export INSTANCE_UUID="$(cat /proc/sys/kernel/random/uuid | tr -d '\n')"
+
+SSH_PROXY_SERVER_ENABLED=${ENABLE_SSH_PROXY:-false}
+if [[ "${SSH_PROXY_ENABLED}" == "true" ]]; then
+  echo "MDS_URL=${MDS_URL}" > /ssh_proxy_server.env
+
+  SSH_PROXY_SERVER_ID=${SSH_SERVER_PROXY_ID:-'00000000-0000-0000-0000-000000000000'}
+  echo "SSH_PROXY_SERVER_ID=${SSH_PROXY_SERVER_ID}" >> /ssh_proxy_server.env
+
+  echo "SSH_PROXY_SERVER_HOST=${SSH_PROXY_SERVER_HOST}" >> /ssh_proxy_server.env
+  echo "SSH_PROXY_SERVER_API_PORT=${SSH_PROXY_SERVER_API_PORT}" >> /ssh_proxy_server.env
+  echo "SSH_PROXY_SERVER_TUNNEL_PORT=${SSH_PROXY_SERVER_TUNNEL_PORT}" >> /ssh_proxy_server.env
+
+  echo "SSH_PROXY_CLIENT_ID=${INSTANCE_UUID|" >> /ssh_proxy_server.env
+
+  SSH_PROXY_SERVER_URL="https://${SSH_PROXY_SERVER_HOST}:${SSH_PROXY_SERVER_API_PORT}"
+  echo "SSH_PROXY_SERVER_URL=${SSH_PROXY_SERVER_URL}" >> /ssh_proxy_server.env
+  
+  SSH_PROXY_SERVER_INSTANCE_URL="${SSH_PROXY_SERVER_URL}/project/${PROJECT_ID}/region/${GCP_REGION}/service/${K_SERVICE}/revision/${K_REVISION}/instance/${INSTANCE_ID}"
+  echo "SSH_PROXY_SERVER_INSTANCE_URL=${SSH_PROXY_SERVER_INSTANCE_URL}" >> /ssh_proxy_server.env
+
+  /poll_ssh_proxy_server
+  watch -n "${SSH_PROXY_PING_INTERVAL:-60}" /poll_ssh_proxy_server &
+  export SSH_PROXY_SERVER_POLL_PID=$!
+
+  sed -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID}|g" \
+    -e "s|%SSH_PROXY_CLIENT_ID%|${SSH_PROXY_CLIENT_ID}|g" \
+    -e "s|%SSH_PROXY_SERVER_HOST%|${SSH_PROXY_SERVER_HOST}|g" \
+    -e "s|%SSH_PROXY_SERVER_PORT%|${SSH_PROXY_SERVER_TUNNEL_PORT}|g" \
+    -e "s|%INSTANCE_ID%|${INSTANCE_ID}|g" \
+    /ssh_proxy_client.yaml > /tmp/ssh_proxy_client.yaml
+
+  /gost -D -C /tmp/ssh_proxy_client.yaml 2>&1 &
+  export SSH_PROXY_CLIENT_PID=$!
+fi
+
+SSH_SERVER_STATIC_PARAMS="hostname=localhost&port=2222&term=xterm-256color"
+
+export SSH_SERVER_URL="https://${K_SERVICE}-${PROJECT_NUM}.${GCP_REGION}.run.app"
+SSH_SERVER_TITLE="${PROJECT_ID}_${GCP_REGION}_${K_SERVICE}_${K_REVISION}"
+SSH_SERVER_PARAMS="${SSH_SERVER_STATIC_PARAMS}&username=${USER_NAME}&title=${SSH_SERVER_TITLE}"
+
+echo "credentials: ${USER_NAME}/${USER_PASSWORD}"
+
+echo "SSH Server URL: ${SSH_SERVER_URL}?${SSH_SERVER_PARAMS}"
+echo "SSH Server proxy command: gcloud run services proxy ${K_SERVICE} --region=${GCP_REGION} --port=${HTTP_PORT}"
+echo "SSH Server proxied URL: http://localhost:${HTTP_PORT}?${SSH_SERVER_PARAMS}"
+
+# web ssh terminal: https://github.com/huashengdun/webssh
+wssh --address='0.0.0.0' --port=${HTTP_PORT} \
+  --encoding='utf-8' --xheaders=True --debug=True \
+  --origin='*' --policy=autoadd --log_to_stderr \
+  --logging=debug --redirect=False --fbidhttp=False \
+  --wpintvl=5 --maxconn=10 --xsrf=False
