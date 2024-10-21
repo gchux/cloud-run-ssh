@@ -19,7 +19,7 @@ FROM --platform=linux/amd64 golang:${GOLANG_VERSION}-bookworm AS builder
 
 ARG GOLANG_VERSION=1.22.4
 ARG GOST_VERSION=3.0.0-rc10
-ARG BIN_NAME=ssh_registry
+ARG BIN_NAME=ssh_proxy_server
 
 WORKDIR /app
 
@@ -42,13 +42,13 @@ RUN CGO_ENABLED=0 go build -a -v -o ${BIN_NAME} main.go \
 
 RUN wget -O gost.tar.gz \
     https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_linux_amd64.tar.gz \
-    && tar -xzf gost.tar.gz && chmod +x gost && mv gost /gost
+    && tar -xzvf gost.tar.gz && chmod +x gost && mv -v gost /gost && rm -vf gost.tar.gz
 
 FROM --platform=linux/amd64 ubuntu:22.04
 
 ARG BIN_NAME=ssh_registry
 
-COPY --from=builder /${BIN_NAME} /ssh_proxy_registry
+COPY --from=builder /${BIN_NAME} /ssh_proxy_server
 COPY --from=builder /gost /gost
 COPY ./ssh_proxy_server.yaml /ssh_proxy_server.yaml
 COPY ./start_ssh_proxy_server /start_ssh_proxy_server

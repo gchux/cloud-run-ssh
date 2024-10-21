@@ -2,6 +2,8 @@
 
 set -x
 
+source /ssh_proxy_server.env
+
 export EXPECTED_SSH_PROXY_SERVER_NAME="${SSH_PROXY_SERVER_ID}.ssh-proxy.internal"
 export SSH_PROXY_SERVER_HOST_AND_PPORT="${SSH_PROXY_SERVER_HOST}:${SSH_PROXY_SERVER_API_PORT}"
 export SSH_PROXY_SERVER_NAME="$(openssl s_client -connect ${SSH_PROXY_SERVER_HOST_AND_PPORT} 2>&1 </dev/null | grep 'subject=' | awk -F ' = ' '{print $3}' | tr -d '\n')"
@@ -13,8 +15,6 @@ if [[ "${SSH_PROXY_SERVER_NAME}" != "${EXPECTED_SSH_PROXY_SERVER_NAME}" ]]; then
 
 MDS_IDENTITY_PATH='instance/service-accounts/default/identity'
 MDS_ID_TOKEN_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}/${MDS_IDENTITY_PATH}?audience=${SSH_PROXY_SERVER_NAME}&format=full"
-
-source /ssh_proxy_server.env
 
 ID_TOKEN="$(${MDS_ID_TOKEN_CURL} | tr -d '\n')"
 
