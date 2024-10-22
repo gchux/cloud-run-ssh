@@ -17,6 +17,8 @@
 FROM --platform=linux/amd64 linuxserver/openssh-server
 # base image: https://github.com/linuxserver/docker-openssh-server
 
+ARG GOST_VERSION=3.0.0-rc10
+
 ARG WEB_PORT
 ARG SSH_USER="user"
 ARG SSH_PASS="pass"
@@ -37,11 +39,13 @@ ENV PASSWORD_ACCESS=${PASSWORD_ACCESS}
 ENV SUDO_ACCESS=${SUDO_ACCESS}
 ENV LOG_STDOUT=true
 
-COPY ./init_wssh keys/authorized_keys* /
+COPY ./init_wssh ./keys/authorized_keys* /
 COPY ./keys/*.pub /pubkeys/
+COPY ./ssh_proxy_client.yaml /ssh_proxy_client.yaml
+COPY ./poll_ssh_proxy_server /poll_ssh_proxy_server
 
 RUN apk update && apk add dpkg fuse vim busybox-extras net-tools bind-tools iproute2 \
-    curl tmux git bc traceroute tcptraceroute tcpdump mtr nmap redis \
+    openssl curl tmux git bc traceroute tcptraceroute tcpdump mtr nmap redis \
     python3-dev py3-pip gcc libc-dev libffi-dev
 
 RUN wget -P /usr/bin http://www.vdberg.org/~richard/tcpping && chmod a+rx /usr/bin/tcpping
@@ -88,6 +92,10 @@ RUN if [[ "${USER_NAME}" == "root" ]] ; then \
     && echo -e '\nPermitRootLogin no' >> /etc/ssh/sshd_config \
     && echo -e '\nAuthorizedKeysFile /wssh/secrets/1/authorized_keys' >> /etc/ssh/sshd_config \
     ; fi
+
+RUN wget -O gost.tar.gz \
+    https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_linux_amd64.tar.gz \
+    && tar -xzvf gost.tar.gz && chmod +x gost && rm -vf gost.tar.gz
 
 EXPOSE ${WEB_PORT}/tcp
 
