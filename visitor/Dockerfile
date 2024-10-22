@@ -15,7 +15,12 @@
 
 FROM --platform=linux/amd64 ubuntu:22.04
 
+ARG DEBIAN_FRONTEND=noninteractive
 ARG GOST_VERSION=3.0.0-rc10
+
+RUN apt-get -qq update  > /dev/null \
+    && apt-get -qq -y jq > /dev/null \
+    && apt-get -qq clean > /dev/null
 
 COPY ./ssh_proxy_visitor.yaml /ssh_proxy_visitor.yaml
 

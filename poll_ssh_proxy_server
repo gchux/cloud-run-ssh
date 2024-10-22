@@ -20,7 +20,7 @@ MDS_ID_TOKEN_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}/${MDS_IDENTITY_P
 
 ID_TOKEN="$(${MDS_ID_TOKEN_CURL} | tr -d '\n')"
 
-curl -iv -k -XPOST \
+curl -iv -k -X"${SSH_PROXY_SERVER_API_METHOD}" \
   -H "x-s8s-ssh-authorization: ${ID_TOKEN}" \
   -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" \
   -H "x-s8s-ssh-client-id: ${SSH_PROXY_CLIENT_ID}" \

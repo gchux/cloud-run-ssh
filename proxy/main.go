@@ -81,7 +81,7 @@ func idTokenVerifier(id *string) func(*gin.Context) {
 
 		credentials, err := google.FindDefaultCredentials(ctx)
 		if err == nil {
-			fmt.Printf("oauth2[1]: %s | %s | %+v\n", projectID, sshProxyServerName, credentials)
+			fmt.Printf("oauth2[2]: %s | %s | %+v\n", projectID, sshProxyServerName, credentials)
 
 			oauth2Service, oauth2Err := oauth2.NewService(ctx,
 				option.WithCredentials(credentials),
@@ -102,7 +102,7 @@ func idTokenVerifier(id *string) func(*gin.Context) {
 				fmt.Println("oauth2[3]", oauth2Err.Error())
 			}
 		} else {
-			fmt.Println("oauth2", err.Error())
+			fmt.Println("oauth2[4]", err.Error())
 		}
 
 		tokenValidator, err := idtoken.NewValidator(ctx)
@@ -199,7 +199,15 @@ func addInstance(c *gin.Context) {
 		return regionToServicesMap
 	}
 
-	projectToRegionsMap.GetOrCompute(project, regionToServicesMapProvider)
+	if regions, loaded := projectToRegionsMap.GetOrCompute(project, regionToServicesMapProvider); loaded {
+		if services, loaded := regions.GetOrCompute(region, serviceToRevisionsMapProvider); loaded {
+			if revisions, loaded := services.GetOrCompute(service, revisionToInstancesMapProvider); loaded {
+				if instances, loaded := revisions.GetOrCompute(revision, instancesSetProvider); loaded {
+					instances.Add(entry)
+				}
+			}
+		}
+	}
 
 	sendResponse(c, http.StatusAccepted,
 		&project, &region, &service, &revision, &instance, &clientID)

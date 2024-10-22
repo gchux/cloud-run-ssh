@@ -34,6 +34,8 @@ if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
   SSH_PROXY_SERVER_INSTANCE_URL="${SSH_PROXY_SERVER_URL}/project/${PROJECT_ID}/region/${GCP_REGION}/service/${K_SERVICE}/revision/${K_REVISION}/instance/${INSTANCE_ID}"
   echo "SSH_PROXY_SERVER_INSTANCE_URL=${SSH_PROXY_SERVER_INSTANCE_URL}" >> /ssh_proxy_client.env
 
+  echo "SSH_PROXY_SERVER_API_METHOD=POST" >> /ssh_proxy_client.env
+
   # register INGRESS with the SSH Proxy Server
   bash /poll_ssh_proxy_server
   # renew INGRESS every x amount of seconds
@@ -81,4 +83,5 @@ echo "[INFO] – SSH web server ( PID: ${SSH_WEB_SERVER_PID} ) exited"
 kill -15 ${SSH_PROXY_SERVER_POLL_PID}
 kill -15 ${SSH_PROXY_CLIENT_PID}
 
-# ToDo: call SSH Proxy Server API to un-register this client
+echo "SSH_PROXY_SERVER_API_METHOD=DELETE" >> /ssh_proxy_client.env
+bash /poll_ssh_proxy_server

@@ -4,12 +4,33 @@ set -x
 
 DEFAULT_SSH_PROXY_SERVER_API_PORT=5000
 DEFAULT_SSH_PROXY_SERVER_TUNNEL_PORT=5555
-DEFAULT_SSH_PROXY_SERVER_ID='00000000-0000-0000-0000-000000000000'
+
+export EXPECTED_SSH_PROXY_SERVER_NAME="${SSH_PROXY_SERVER_ID}.ssh-proxy.internal"
+
+# make sure that INGRESS is created agains the correct SSH Proxy Server: get the subject from the SSH Proxy Server self-signed certificate.
+export SSH_PROXY_SERVER_API_HOST_AND_PPORT="${SSH_PROXY_SERVER_HOST}:${SSH_PROXY_SERVER_API_PORT:-$DEFAULT_SSH_PROXY_SERVER_API_PORT}"
+export SSH_PROXY_SERVER_NAME=`openssl s_client -connect "${SSH_PROXY_SERVER_API_HOST_AND_PPORT}" 2>&1 </dev/null | grep 'subject=' | tr -d ' ' | tr ',' '\n' | grep -Ei '^CN=.*' | awk -F'=' '{print $2}' | tr -d '\n'`
+
+if [[ "${SSH_PROXY_SERVER_NAME}" != "${EXPECTED_SSH_PROXY_SERVER_NAME}" ]]; then
+  echo "SSH Proxy Server identity could not be verified: ${EXPECTED_SSH_PROXY_SERVER_NAME} - ${SSH_PROXY_SERVER_NAME}"
+  exit 0
+fi
+
+MDS_IDENTITY_PATH='instance/service-accounts/default/identity'
+MDS_ID_TOKEN_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}/${MDS_IDENTITY_PATH}?audience=${SSH_PROXY_SERVER_NAME}&format=full"
+
+ID_TOKEN="$(${MDS_ID_TOKEN_CURL} | tr -d '\n')"
+
+SSH_PROXY_SERVER_API_PATH="project/${PROJECT_ID}/region/${GCP_REGION}/service/${K_SERVICE}/revision/${K_REVISION}"
+SSH_PROXY_SERVER_API_URL="https://${SSH_PROXY_SERVER_API_HOST_AND_PPORT}/${SSH_PROXY_SERVER_API_PATH}/"
+
+SSH_PROXY_CLIENT_ID=`curl -sk -H "x-s8s-ssh-authorization: ${ID_TOKEN}" -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" "${SSH_PROXY_SERVER_API_URL}" | jq -crM '.[]' | grep "${INSTANCE_ID}" | awk '{print $2}'`
 
 sed -e "s|%SSH_PROXY_SERVER_HOST%|${SSH_PROXY_SERVER_HOST}|g" \
   -e "s|%SSH_PROXY_SERVER_TUNNEL_PORT%|${SSH_PROXY_SERVER_TUNNEL_PORT:-$DEFAULT_SSH_PROXY_SERVER_TUNNEL_PORT}|g" \
-  -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID:-$DEFAULT_SSH_PROXY_SERVER_ID}|g" \
+  -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID}|g" \
   -e "s|%SSH_PROXY_CLIENT_ID%|${SSH_PROXY_CLIENT_ID}|g" \
+  -e "s|%INSTANCE_ID%|${INSTANCE_ID}|g" \
   /ssh_proxy_visitor.yaml > /tmp/ssh_proxy_visitor.yaml
 
 cat -n /tmp/ssh_proxy_visitor.yaml
