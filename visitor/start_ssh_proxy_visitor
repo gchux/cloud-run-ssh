@@ -1,0 +1,24 @@
+#! /bin/bash
+
+set -x
+
+DEFAULT_SSH_PROXY_SERVER_API_PORT=5000
+DEFAULT_SSH_PROXY_SERVER_TUNNEL_PORT=5555
+DEFAULT_SSH_PROXY_SERVER_ID='00000000-0000-0000-0000-000000000000'
+
+sed -e "s|%SSH_PROXY_SERVER_HOST%|${SSH_PROXY_SERVER_HOST}|g" \
+  -e "s|%SSH_PROXY_SERVER_TUNNEL_PORT%|${SSH_PROXY_SERVER_TUNNEL_PORT:-$DEFAULT_SSH_PROXY_SERVER_TUNNEL_PORT}|g" \
+  -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID:-$DEFAULT_SSH_PROXY_SERVER_ID}|g" \
+  -e "s|%SSH_PROXY_CLIENT_ID%|${SSH_PROXY_CLIENT_ID}|g" \
+  /ssh_proxy_visitor.yaml > /tmp/ssh_proxy_visitor.yaml
+
+cat -n /tmp/ssh_proxy_visitor.yaml
+
+trap 'kill -TERM $SSH_PROXY_VISITOR_PID' TERM INT
+/gost -D -C /tmp/ssh_proxy_visitor.yaml 2>&1 &
+export SSH_PROXY_VISITOR_PID=$!
+echo "[INFO] – SSH proxy visitor started w/PID: ${SSH_PROXY_VISITOR_PID}"
+wait ${SSH_PROXY_VISITOR_PID}
+trap - TERM INT
+wait ${SSH_PROXY_VISITOR_PID}
+echo "[INFO] – SSH proxy visitor ( PID: ${SSH_PROXY_VISITOR_PID} ) exited"

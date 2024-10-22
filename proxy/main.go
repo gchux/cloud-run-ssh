@@ -1,17 +1,20 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/alphadose/haxmap"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/idtoken"
+	oauth2 "google.golang.org/api/oauth2/v2"
+	"google.golang.org/api/option"
 )
 
 type (
@@ -24,7 +27,7 @@ type (
 var id = flag.String("id", "", "allowed UUID to be registered")
 
 const (
-	sshProxyServerNameTemplate = "%s.ssh-server.internal"
+	sshProxyServerNameTemplate = "%s.ssh-proxy.internal"
 
 	xProjectId            = "x-project-id"
 	xServerlessRegion     = "x-s8s-region"
@@ -44,7 +47,10 @@ const (
 	instanceAPI = "/instance/:instance"
 )
 
-var allUUIDs = uuid.Nil.String()
+var (
+	projectID = os.Getenv("PROJECT_ID")
+	allUUIDs  = uuid.Nil.String()
+)
 
 var (
 	revisionToInstancesMap RevisionToInstancesMap = haxmap.New[string, mapset.Set[string]]()
@@ -71,19 +77,44 @@ func idTokenVerifier(id *string) func(*gin.Context) {
 			return
 		}
 
-		tokenValidator, err := idtoken.NewValidator(context.Background())
+		ctx := c.Request.Context()
+
+		credentials, err := google.FindDefaultCredentials(ctx)
+		if err == nil {
+			fmt.Printf("oauth2[1]: %s | %s | %+v\n", projectID, sshProxyServerName, credentials)
+
+			oauth2Service, oauth2Err := oauth2.NewService(ctx,
+				option.WithCredentials(credentials),
+				option.WithQuotaProject(projectID),
+				option.WithAudiences(sshProxyServerName))
+
+			if oauth2Err == nil {
+				tokenInfoCall := oauth2Service.Tokeninfo()
+				tokenInfoCall.IdToken(idToken)
+				tokenInfo, tokenInfoErr := tokenInfoCall.Do()
+
+				if tokenInfoErr == nil && tokenInfo.Audience == sshProxyServerName {
+					return
+				}
+
+				fmt.Println("oauth2[2]:", tokenInfoErr.Error())
+			} else {
+				fmt.Println("oauth2[3]", oauth2Err.Error())
+			}
+		} else {
+			fmt.Println("oauth2", err.Error())
+		}
+
+		tokenValidator, err := idtoken.NewValidator(ctx)
 		if err != nil {
+			fmt.Println("idtoken[1]", err.Error())
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
 
-		payload, err := tokenValidator.Validate(context.Background(), idToken, *id)
+		_, err = tokenValidator.Validate(ctx, idToken, sshProxyServerName)
 		if err != nil {
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		if audience := payload.Audience; audience != sshProxyServerName {
+			fmt.Println("idtoken[2]", err.Error())
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -102,6 +133,7 @@ func getIngessRules(c *gin.Context) {
 			})
 			return true
 		})
+	fmt.Fprintln(c.Writer)
 }
 
 func sendResponse(
@@ -128,32 +160,46 @@ func addInstance(c *gin.Context) {
 		return
 	}
 
-	project := c.Param("service")
+	project := c.Param("project")
 	region := c.Param("region")
 	service := c.Param("service")
 	revision := c.Param("revision")
 	instance := c.Param("instance")
 
-	entry := fmt.Sprintf("%s %s", clientID, instance)
+	entry := fmt.Sprintf("%s %s", instance, clientID)
 
-	projectToRegionsMap.GetOrCompute(project,
-		func() RegionToServicesMap {
-			regionToServicesMap.GetOrCompute(region,
-				func() ServiceToRevisionsMap {
-					serviceToRevisionsMap.GetOrCompute(service,
-						func() RevisionToInstancesMap {
-							if instances, loaded := revisionToInstancesMap.GetOrCompute(revision,
-								func() mapset.Set[string] {
-									return mapset.NewSet(entry)
-								}); loaded {
-								instances.Add(entry)
-							}
-							return revisionToInstancesMap
-						})
-					return serviceToRevisionsMap
-				})
-			return regionToServicesMap
-		})
+	instancesSetProvider := func() mapset.Set[string] {
+		return mapset.NewSet(entry)
+	}
+
+	revisionToInstancesMapProvider := func() RevisionToInstancesMap {
+		if instances, loaded := revisionToInstancesMap.GetOrCompute(revision, instancesSetProvider); loaded {
+			instances.Add(entry)
+		}
+		return revisionToInstancesMap
+	}
+
+	serviceToRevisionsMapProvider := func() ServiceToRevisionsMap {
+		if revisions, loaded := serviceToRevisionsMap.GetOrCompute(service, revisionToInstancesMapProvider); loaded {
+			if instances, loaded := revisions.GetOrCompute(revision, instancesSetProvider); loaded {
+				instances.Add(entry)
+			}
+		}
+		return serviceToRevisionsMap
+	}
+
+	regionToServicesMapProvider := func() RegionToServicesMap {
+		if services, loaded := regionToServicesMap.GetOrCompute(region, serviceToRevisionsMapProvider); loaded {
+			if revisions, loaded := services.GetOrCompute(service, revisionToInstancesMapProvider); loaded {
+				if instances, loaded := revisions.GetOrCompute(revision, instancesSetProvider); loaded {
+					instances.Add(entry)
+				}
+			}
+		}
+		return regionToServicesMap
+	}
+
+	projectToRegionsMap.GetOrCompute(project, regionToServicesMapProvider)
 
 	sendResponse(c, http.StatusAccepted,
 		&project, &region, &service, &revision, &instance, &clientID)
@@ -204,6 +250,7 @@ func getProjectIngress(c *gin.Context) {
 	regions, ok := projectToRegionsMap.Get(project)
 	if !ok {
 		c.Status(http.StatusNotFound)
+		return
 	}
 
 	c.Status(http.StatusOK)
@@ -317,7 +364,7 @@ func main() {
 	externalAPI.SetTrustedProxies(nil)
 	internalAPI.SetTrustedProxies(nil)
 
-	externalAPI.GET("/ingress", getIngessRules)
+	internalAPI.GET("/ingress", getIngessRules)
 
 	externalProjectAPI := externalAPI.Group(projectAPI)
 	internalProjectAPI := internalAPI.Group(projectAPI)

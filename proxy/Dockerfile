@@ -46,8 +46,9 @@ RUN wget -O gost.tar.gz \
 
 FROM --platform=linux/amd64 ubuntu:22.04
 
-ARG BIN_NAME=ssh_registry
+ARG BIN_NAME=ssh_proxy_server
 
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /${BIN_NAME} /ssh_proxy_server
 COPY --from=builder /gost /gost
 COPY ./ssh_proxy_server.yaml /ssh_proxy_server.yaml

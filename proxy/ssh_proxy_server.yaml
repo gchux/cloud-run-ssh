@@ -1,6 +1,6 @@
 services:
   - name: ssh-registry-api
-    addr: :%SSH_PROXY_REGISTRY_API_PORT%
+    addr: :%SSH_PROXY_SERVER_API_PORT%
     handler:
       type: tcp
       metadata:
@@ -13,11 +13,11 @@ services:
           addr: 127.0.0.1:8080
           protocol: http
   - name: ssh-proxy
-    addr: :%SSH_PROXY_INGRESS_PORT%
+    addr: :%SSH_PROXY_SERVER_TUNNEL_PORT%
     handler:
       type: tunnel
       metadata:
-        entrypoint: :%SSH_PROXY_PORT%
+        tunnel.direct: true
         ingress: ssh-proxy-ingress
     listener:
       type: tls
@@ -37,5 +37,5 @@ ingresses:
 
 tls:
   validity: 8760h
-  commonName: %SSH_PROXY_ID%.ssh-proxy.internal
-  organization: %SSH_PROXY_ID%
+  commonName: %SSH_PROXY_SERVER_ID%.ssh-proxy.internal
+  organization: %SSH_PROXY_SERVER_ID%
