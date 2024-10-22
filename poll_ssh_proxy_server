@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -x
+POLL_INTERVAL=${1:-60}
+POLL_METHOD=${2:-POST}
 
 source /ssh_proxy_client.env
 
@@ -15,13 +16,29 @@ if [[ "${SSH_PROXY_SERVER_NAME}" != "${EXPECTED_SSH_PROXY_SERVER_NAME}" ]]; then
   exit 0
 fi
 
-MDS_IDENTITY_PATH='instance/service-accounts/default/identity'
-MDS_ID_TOKEN_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}/${MDS_IDENTITY_PATH}?audience=${SSH_PROXY_SERVER_NAME}&format=full"
+export MDS_IDENTITY_PATH='instance/service-accounts/default/identity'
+export MDS_ID_TOKEN_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}/${MDS_IDENTITY_PATH}?audience=${SSH_PROXY_SERVER_NAME}&format=full"
 
-ID_TOKEN="$(${MDS_ID_TOKEN_CURL} | tr -d '\n')"
 
-curl -iv -k -X"${SSH_PROXY_SERVER_API_METHOD}" \
-  -H "x-s8s-ssh-authorization: ${ID_TOKEN}" \
-  -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" \
-  -H "x-s8s-ssh-client-id: ${SSH_PROXY_CLIENT_ID}" \
-  "${SSH_PROXY_SERVER_INSTANCE_URL}"
+ping_ssh_proxy_server() {
+  ID_TOKEN="$(${MDS_ID_TOKEN_CURL} | tr -d '\n')"
+  
+  curl -ivL -k -X"${1:-POST}" \
+    -H "x-s8s-ssh-authorization: ${ID_TOKEN}" \
+    -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" \
+    -H "x-s8s-ssh-client-id: ${SSH_PROXY_CLIENT_ID}" \
+    "${SSH_PROXY_SERVER_INSTANCE_URL}"
+}
+
+poll_ssh_proxy_server() {
+  while true; do
+    ping_ssh_proxy_server ${2:-POST}
+    sleep ${1:-60}
+  done
+}
+
+if (( ${POLL_INTERVAL} > 0 )); then
+  poll_ssh_proxy_server ${POLL_INTERVAL} ${POLL_METHOD}
+else
+  ping_ssh_proxy_server ${POLL_METHOD}
+fi

@@ -1,14 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/alphadose/haxmap"
-	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2/google"
@@ -18,7 +19,18 @@ import (
 )
 
 type (
-	RevisionToInstancesMap = *haxmap.Map[string, mapset.Set[string]]
+	ServerlessInstance struct {
+		Project  *string    `json:"project"`
+		Region   *string    `json:"region"`
+		Service  *string    `json:"service"`
+		Revision *string    `json:"revision"`
+		ID       *string    `json:"instance"`
+		Tunnel   *string    `json:"tunnel"`
+		LastPing *time.Time `json:"ping"`
+	}
+
+	InstanceToConfigMap    = *haxmap.Map[string, ServerlessInstance]
+	RevisionToInstancesMap = *haxmap.Map[string, InstanceToConfigMap]
 	ServiceToRevisionsMap  = *haxmap.Map[string, RevisionToInstancesMap]
 	RegionToServicesMap    = *haxmap.Map[string, ServiceToRevisionsMap]
 	ProjectToRegionsMap    = *haxmap.Map[string, RegionToServicesMap]
@@ -53,7 +65,8 @@ var (
 )
 
 var (
-	revisionToInstancesMap RevisionToInstancesMap = haxmap.New[string, mapset.Set[string]]()
+	instanceToConfigMap    InstanceToConfigMap    = haxmap.New[string, ServerlessInstance]()
+	revisionToInstancesMap RevisionToInstancesMap = haxmap.New[string, InstanceToConfigMap]()
 	serviceToRevisionsMap  ServiceToRevisionsMap  = haxmap.New[string, RevisionToInstancesMap]()
 	regionToServicesMap    RegionToServicesMap    = haxmap.New[string, ServiceToRevisionsMap]()
 	projectToRegionsMap    ProjectToRegionsMap    = haxmap.New[string, RegionToServicesMap]()
@@ -86,7 +99,7 @@ func idTokenVerifier(id *string) func(*gin.Context) {
 			oauth2Service, oauth2Err := oauth2.NewService(ctx,
 				option.WithCredentials(credentials),
 				option.WithQuotaProject(projectID),
-				option.WithAudiences(sshProxyServerName))
+				option.WithRequestReason(sshProxyServerName))
 
 			if oauth2Err == nil {
 				tokenInfoCall := oauth2Service.Tokeninfo()
@@ -125,12 +138,9 @@ func getIngessRules(c *gin.Context) {
 	c.Status(http.StatusOK)
 	c.Header("Content-Type", "text/plain")
 	c.Writer.WriteHeaderNow()
-	revisionToInstancesMap.ForEach(
-		func(revision string, instances mapset.Set[string]) bool {
-			instances.Each(func(instance string) bool {
-				fmt.Fprintln(c.Writer, instance)
-				return false
-			})
+	instanceToConfigMap.ForEach(
+		func(_ string, config ServerlessInstance) bool {
+			fmt.Fprintf(c.Writer, "%s %s", *config.ID, *config.Tunnel)
 			return true
 		})
 	fmt.Fprintln(c.Writer)
@@ -166,23 +176,37 @@ func addInstance(c *gin.Context) {
 	revision := c.Param("revision")
 	instance := c.Param("instance")
 
-	entry := fmt.Sprintf("%s %s", instance, clientID)
+	ts := time.Now()
 
-	instancesSetProvider := func() mapset.Set[string] {
-		return mapset.NewSet(entry)
+	config := ServerlessInstance{
+		Project:  &project,
+		Region:   &region,
+		Service:  &service,
+		Revision: &revision,
+		ID:       &instance,
+		Tunnel:   &clientID,
+		LastPing: &ts,
+	}
+
+	instanceToConfigMap.Set(instance, config)
+
+	instanceToConfigMapProvider := func() InstanceToConfigMap {
+		configMap := haxmap.New[string, ServerlessInstance]()
+		configMap.Set(instance, config)
+		return configMap
 	}
 
 	revisionToInstancesMapProvider := func() RevisionToInstancesMap {
-		if instances, loaded := revisionToInstancesMap.GetOrCompute(revision, instancesSetProvider); loaded {
-			instances.Add(entry)
+		if instances, loaded := revisionToInstancesMap.GetOrCompute(revision, instanceToConfigMapProvider); loaded {
+			instances.Set(instance, config)
 		}
 		return revisionToInstancesMap
 	}
 
 	serviceToRevisionsMapProvider := func() ServiceToRevisionsMap {
 		if revisions, loaded := serviceToRevisionsMap.GetOrCompute(service, revisionToInstancesMapProvider); loaded {
-			if instances, loaded := revisions.GetOrCompute(revision, instancesSetProvider); loaded {
-				instances.Add(entry)
+			if instances, loaded := revisions.GetOrCompute(revision, instanceToConfigMapProvider); loaded {
+				instances.Set(instance, config)
 			}
 		}
 		return serviceToRevisionsMap
@@ -191,8 +215,8 @@ func addInstance(c *gin.Context) {
 	regionToServicesMapProvider := func() RegionToServicesMap {
 		if services, loaded := regionToServicesMap.GetOrCompute(region, serviceToRevisionsMapProvider); loaded {
 			if revisions, loaded := services.GetOrCompute(service, revisionToInstancesMapProvider); loaded {
-				if instances, loaded := revisions.GetOrCompute(revision, instancesSetProvider); loaded {
-					instances.Add(entry)
+				if instances, loaded := revisions.GetOrCompute(revision, instanceToConfigMapProvider); loaded {
+					instances.Set(instance, config)
 				}
 			}
 		}
@@ -202,8 +226,8 @@ func addInstance(c *gin.Context) {
 	if regions, loaded := projectToRegionsMap.GetOrCompute(project, regionToServicesMapProvider); loaded {
 		if services, loaded := regions.GetOrCompute(region, serviceToRevisionsMapProvider); loaded {
 			if revisions, loaded := services.GetOrCompute(service, revisionToInstancesMapProvider); loaded {
-				if instances, loaded := revisions.GetOrCompute(revision, instancesSetProvider); loaded {
-					instances.Add(entry)
+				if instances, loaded := revisions.GetOrCompute(revision, instanceToConfigMapProvider); loaded {
+					instances.Set(instance, config)
 				}
 			}
 		}
@@ -228,15 +252,18 @@ func removeInstance(c *gin.Context) {
 	revision := c.Param("revision")
 	instance := c.Param("instance")
 
-	if x, ok := projectToRegionsMap.Get(project); ok {
-		if y, ok := x.Get(region); ok {
-			if z, ok := y.Get(service); ok {
-				if instances, ok := z.Get(revision); ok {
-					if instances.Contains(instance) {
-						instances.Remove(instance)
-						sendResponse(c, http.StatusAccepted,
-							&project, &region, &service, &revision, &instance, &clientID)
-						return
+	if regions, ok := projectToRegionsMap.Get(project); ok {
+		if services, ok := regions.Get(region); ok {
+			if revisions, ok := services.Get(service); ok {
+				if instances, ok := revisions.Get(revision); ok {
+					if config, ok := instances.Get(instance); ok {
+						if clientID == *config.Tunnel {
+							instances.Del(*config.ID)
+							instanceToConfigMap.Del(*config.ID)
+							sendResponse(c, http.StatusAccepted,
+								&project, &region, &service, &revision, &instance, config.Tunnel)
+							return
+						}
 					}
 				}
 			}
@@ -245,6 +272,31 @@ func removeInstance(c *gin.Context) {
 
 	sendResponse(c, http.StatusNotFound,
 		&project, &region, &service, &revision, &instance, &clientID)
+}
+
+func getInstance(c *gin.Context) {
+	project := c.Param("project")
+	region := c.Param("region")
+	service := c.Param("service")
+	revision := c.Param("revision")
+	instance := c.Param("instance")
+
+	if regions, ok := projectToRegionsMap.Get(project); ok {
+		if services, ok := regions.Get(region); ok {
+			if revisions, ok := services.Get(service); ok {
+				if instances, ok := revisions.Get(revision); ok {
+					if config, ok := instances.Get(instance); ok {
+						config, _ = instanceToConfigMap.Get(*config.ID)
+						if json, err := json.Marshal(config); err == nil {
+							c.Status(http.StatusOK)
+							c.Writer.Write(json)
+						}
+						return
+					}
+				}
+			}
+		}
+	}
 }
 
 func getProjectIngress(c *gin.Context) {
@@ -396,11 +448,13 @@ func main() {
 
 	externalRevisionAPI := externalServiceAPI.Group(revisionAPI)
 	externalRevisionAPI.GET("/", getRevisionIngress)
+	externalRevisionAPI.GET(instanceAPI, getInstance)
 	externalRevisionAPI.POST(instanceAPI, addInstance)
 	externalRevisionAPI.DELETE(instanceAPI, removeInstance)
 
 	internalRevisionAPI := internalServiceAPI.Group(revisionAPI)
 	internalRevisionAPI.GET("/", getRevisionIngress)
+	internalRevisionAPI.GET(instanceAPI, getInstance)
 	internalRevisionAPI.POST(instanceAPI, addInstance)
 	internalRevisionAPI.DELETE(instanceAPI, removeInstance)
 

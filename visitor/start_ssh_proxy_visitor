@@ -16,15 +16,16 @@ if [[ "${SSH_PROXY_SERVER_NAME}" != "${EXPECTED_SSH_PROXY_SERVER_NAME}" ]]; then
   exit 0
 fi
 
+MDS_URL='http://metadata.google.internal/computeMetadata/v1'
 MDS_IDENTITY_PATH='instance/service-accounts/default/identity'
 MDS_ID_TOKEN_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}/${MDS_IDENTITY_PATH}?audience=${SSH_PROXY_SERVER_NAME}&format=full"
 
 ID_TOKEN="$(${MDS_ID_TOKEN_CURL} | tr -d '\n')"
 
-SSH_PROXY_SERVER_API_PATH="project/${PROJECT_ID}/region/${GCP_REGION}/service/${K_SERVICE}/revision/${K_REVISION}"
-SSH_PROXY_SERVER_API_URL="https://${SSH_PROXY_SERVER_API_HOST_AND_PPORT}/${SSH_PROXY_SERVER_API_PATH}/"
+SSH_PROXY_SERVER_API_PATH="project/${PROJECT_ID}/region/${GCP_REGION}/service/${K_SERVICE}/revision/${K_REVISION}/instance/${INSTANCE_ID}"
+SSH_PROXY_SERVER_API_URL="https://${SSH_PROXY_SERVER_API_HOST_AND_PPORT}/${SSH_PROXY_SERVER_API_PATH}"
 
-SSH_PROXY_CLIENT_ID=`curl -sk -H "x-s8s-ssh-authorization: ${ID_TOKEN}" -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" "${SSH_PROXY_SERVER_API_URL}" | jq -crM '.[]' | grep "${INSTANCE_ID}" | awk '{print $2}'`
+SSH_PROXY_CLIENT_ID=`curl -sk -H "x-s8s-ssh-authorization: ${ID_TOKEN}" -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" "${SSH_PROXY_SERVER_API_URL}" | jq -crM '.tunnel' | tr -d '\n'`
 
 sed -e "s|%SSH_PROXY_SERVER_HOST%|${SSH_PROXY_SERVER_HOST}|g" \
   -e "s|%SSH_PROXY_SERVER_TUNNEL_PORT%|${SSH_PROXY_SERVER_TUNNEL_PORT:-$DEFAULT_SSH_PROXY_SERVER_TUNNEL_PORT}|g" \

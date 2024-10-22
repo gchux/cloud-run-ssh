@@ -19,14 +19,15 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG GOST_VERSION=3.0.0-rc10
 
 RUN apt-get -qq update  > /dev/null \
-    && apt-get -qq -y jq > /dev/null \
+    && apt-get -qq -y install openssl wget curl jq > /dev/null \
     && apt-get -qq clean > /dev/null
 
+COPY ./start_ssh_proxy_visitor /start_ssh_proxy_visitor
 COPY ./ssh_proxy_visitor.yaml /ssh_proxy_visitor.yaml
 
 RUN wget -O gost.tar.gz \
     https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_linux_amd64.tar.gz \
-    && tar -xzvf gost.tar.gz && chmod +x gost && mv -v gost /gost && rm -vf gost.tar.gz
+    && tar -xzvf gost.tar.gz && chmod +x gost && rm -vf gost.tar.gz
 
 ENTRYPOINT ["/start_ssh_proxy_visitor"]
 
