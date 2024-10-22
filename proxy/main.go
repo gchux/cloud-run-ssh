@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/alphadose/haxmap"
@@ -29,7 +30,7 @@ type (
 		LastPing *time.Time `json:"ping"`
 	}
 
-	InstanceToConfigMap    = *haxmap.Map[string, ServerlessInstance]
+	InstanceToConfigMap    = *haxmap.Map[string, *ServerlessInstance]
 	RevisionToInstancesMap = *haxmap.Map[string, InstanceToConfigMap]
 	ServiceToRevisionsMap  = *haxmap.Map[string, RevisionToInstancesMap]
 	RegionToServicesMap    = *haxmap.Map[string, ServiceToRevisionsMap]
@@ -62,10 +63,13 @@ const (
 var (
 	projectID = os.Getenv("PROJECT_ID")
 	allUUIDs  = uuid.Nil.String()
+
+	reaperInterval = 60 * time.Second
+	maxIdleTimeout = 15 * time.Minute
 )
 
 var (
-	instanceToConfigMap    InstanceToConfigMap    = haxmap.New[string, ServerlessInstance]()
+	instanceToConfigMap    InstanceToConfigMap    = haxmap.New[string, *ServerlessInstance]()
 	revisionToInstancesMap RevisionToInstancesMap = haxmap.New[string, InstanceToConfigMap]()
 	serviceToRevisionsMap  ServiceToRevisionsMap  = haxmap.New[string, RevisionToInstancesMap]()
 	regionToServicesMap    RegionToServicesMap    = haxmap.New[string, ServiceToRevisionsMap]()
@@ -134,12 +138,35 @@ func idTokenVerifier(id *string) func(*gin.Context) {
 	}
 }
 
+func idleInstancesReaper(interval, timeout *time.Duration) {
+	ticker := time.NewTicker(*interval)
+
+	for range ticker.C {
+		var reapedInstances atomic.Uint32
+		instanceToConfigMap.ForEach(
+			func(_ string, config *ServerlessInstance) bool {
+				idle := time.Since(*config.LastPing)
+				if idle >= *timeout {
+					if instances, ok := revisionToInstancesMap.Get(*config.Revision); ok {
+						if cfg, ok := instances.GetAndDel(*config.ID); ok {
+							instanceToConfigMap.Del(*cfg.ID)
+							reapedInstances.Add(1)
+							fmt.Printf("reaped instance: %s[%s] | idle: %v\n", *cfg.ID, *cfg.Tunnel, idle)
+						}
+					}
+				}
+				return true
+			})
+		fmt.Printf("reaped %d instances\n", reapedInstances.Load())
+	}
+}
+
 func getIngessRules(c *gin.Context) {
 	c.Status(http.StatusOK)
 	c.Header("Content-Type", "text/plain")
 	c.Writer.WriteHeaderNow()
 	instanceToConfigMap.ForEach(
-		func(_ string, config ServerlessInstance) bool {
+		func(_ string, config *ServerlessInstance) bool {
 			fmt.Fprintf(c.Writer, "%s %s", *config.ID, *config.Tunnel)
 			return true
 		})
@@ -158,7 +185,10 @@ func sendResponse(
 	c.Header(xServerlessService, *service)
 	c.Header(xServerlessRevision, *revision)
 	c.Header(xServerlessInstanceId, *instance)
-	c.Header(xServerlessSshClientId, *id)
+
+	if *id != "" {
+		c.Header(xServerlessSshClientId, *id)
+	}
 }
 
 func addInstance(c *gin.Context) {
@@ -178,7 +208,7 @@ func addInstance(c *gin.Context) {
 
 	ts := time.Now()
 
-	config := ServerlessInstance{
+	config := &ServerlessInstance{
 		Project:  &project,
 		Region:   &region,
 		Service:  &service,
@@ -191,7 +221,7 @@ func addInstance(c *gin.Context) {
 	instanceToConfigMap.Set(instance, config)
 
 	instanceToConfigMapProvider := func() InstanceToConfigMap {
-		configMap := haxmap.New[string, ServerlessInstance]()
+		configMap := haxmap.New[string, *ServerlessInstance]()
 		configMap.Set(instance, config)
 		return configMap
 	}
@@ -258,11 +288,13 @@ func removeInstance(c *gin.Context) {
 				if instances, ok := revisions.Get(revision); ok {
 					if config, ok := instances.Get(instance); ok {
 						if clientID == *config.Tunnel {
-							instances.Del(*config.ID)
-							instanceToConfigMap.Del(*config.ID)
-							sendResponse(c, http.StatusAccepted,
-								&project, &region, &service, &revision, &instance, config.Tunnel)
-							return
+							if cfg, ok := instances.GetAndDel(*config.ID); ok {
+								instanceToConfigMap.Del(*cfg.ID)
+								sendResponse(c, http.StatusAccepted,
+									cfg.Project, cfg.Region, cfg.Service, cfg.Revision, cfg.ID, cfg.Tunnel)
+								return
+
+							}
 						}
 					}
 				}
@@ -286,17 +318,23 @@ func getInstance(c *gin.Context) {
 			if revisions, ok := services.Get(service); ok {
 				if instances, ok := revisions.Get(revision); ok {
 					if config, ok := instances.Get(instance); ok {
-						config, _ = instanceToConfigMap.Get(*config.ID)
-						if json, err := json.Marshal(config); err == nil {
-							c.Status(http.StatusOK)
-							c.Writer.Write(json)
+						if cfg, ok := instanceToConfigMap.Get(*config.ID); ok {
+							if json, err := json.Marshal(*cfg); err == nil {
+								sendResponse(c, http.StatusOK,
+									cfg.Project, cfg.Region, cfg.Service, cfg.Revision, cfg.ID, cfg.Tunnel)
+								c.Writer.Write(json)
+							}
+							return
 						}
-						return
 					}
 				}
 			}
 		}
 	}
+
+	clientID := ""
+	sendResponse(c, http.StatusNotFound,
+		&project, &region, &service, &revision, &instance, &clientID)
 }
 
 func getProjectIngress(c *gin.Context) {
@@ -458,6 +496,7 @@ func main() {
 	internalRevisionAPI.POST(instanceAPI, addInstance)
 	internalRevisionAPI.DELETE(instanceAPI, removeInstance)
 
+	go idleInstancesReaper(&reaperInterval, &maxIdleTimeout)
 	go internalAPI.Run(":8888")
 	externalAPI.Run(":8080")
 }
