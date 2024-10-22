@@ -20,7 +20,7 @@ export MDS_IDENTITY_PATH='instance/service-accounts/default/identity'
 export MDS_ID_TOKEN_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}/${MDS_IDENTITY_PATH}?audience=${SSH_PROXY_SERVER_NAME}&format=full"
 
 
-ping_ssh_proxy_server() {
+function ping_ssh_proxy_server {
   ID_TOKEN="$(${MDS_ID_TOKEN_CURL} | tr -d '\n')"
   
   curl -ivL -k -X"${1:-POST}" \
@@ -30,7 +30,7 @@ ping_ssh_proxy_server() {
     "${SSH_PROXY_SERVER_INSTANCE_URL}"
 }
 
-poll_ssh_proxy_server() {
+function poll_ssh_proxy_server {
   while true; do
     ping_ssh_proxy_server ${2:-POST}
     sleep ${1:-60}
