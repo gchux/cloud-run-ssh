@@ -218,8 +218,10 @@ func addInstance(c *gin.Context) {
 		LastPing: &ts,
 	}
 
-	instanceToConfigMap.Set(instance, config)
+	go instanceToConfigMap.Set(instance, config)
 
+	// revisions get their own buckets to speed up POST/DELETE operations:
+	// there are many more instances than `project/region/service/revision` combinatoins
 	instanceToConfigMapProvider := func() InstanceToConfigMap {
 		configMap := haxmap.New[string, *ServerlessInstance]()
 		configMap.Set(instance, config)
@@ -289,7 +291,7 @@ func removeInstance(c *gin.Context) {
 					if config, ok := instances.Get(instance); ok {
 						if clientID == *config.Tunnel {
 							if cfg, ok := instances.GetAndDel(*config.ID); ok {
-								instanceToConfigMap.Del(*cfg.ID)
+								go instanceToConfigMap.Del(*cfg.ID)
 								sendResponse(c, http.StatusAccepted,
 									cfg.Project, cfg.Region, cfg.Service, cfg.Revision, cfg.ID, cfg.Tunnel)
 								return
