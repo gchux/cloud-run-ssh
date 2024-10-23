@@ -1,4 +1,4 @@
-module cloud-run-ssh-registry
+module github.com/gchux/cloud-run-ssh/proxy
 
 go 1.22.4
 
@@ -6,7 +6,9 @@ require (
 	github.com/alphadose/haxmap v1.4.0
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/gin-gonic/gin v1.10.0
+	github.com/goccy/go-yaml v1.12.0
 	github.com/google/uuid v1.6.0
+	golang.org/x/oauth2 v0.23.0
 	google.golang.org/api v0.201.0
 )
 
@@ -18,6 +20,7 @@ require (
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
+	github.com/fatih/color v1.10.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -34,6 +37,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
+	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -49,9 +53,9 @@ require (
 	golang.org/x/crypto v0.28.0 // indirect
 	golang.org/x/exp v0.0.0-20221031165847-c99f073a8326 // indirect
 	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/oauth2 v0.23.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9 // indirect
 	google.golang.org/grpc v1.67.1 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect

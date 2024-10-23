@@ -1,6 +1,7 @@
 services:
   - name: ssh-registry-api
     addr: :%SSH_PROXY_SERVER_API_PORT%
+    admissions:
     handler:
       type: tcp
       metadata:

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"sync/atomic"
@@ -17,6 +16,8 @@ import (
 	"google.golang.org/api/idtoken"
 	oauth2 "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
+
+	cfg "github.com/gchux/cloud-run-ssh/proxy/pkg/config"
 )
 
 type (
@@ -37,9 +38,11 @@ type (
 	ProjectToRegionsMap    = *haxmap.Map[string, RegionToServicesMap]
 )
 
-var id = flag.String("id", "", "allowed UUID to be registered")
-
 const (
+	configContextKey = "ssh_proxy_server_config"
+
+	configFile = "/etc/ssh_proxy_server/config.yaml"
+
 	sshProxyServerNameTemplate = "%s.ssh-proxy.internal"
 
 	xProjectId            = "x-project-id"
@@ -61,8 +64,10 @@ const (
 )
 
 var (
-	projectID = os.Getenv("PROJECT_ID")
-	allUUIDs  = uuid.Nil.String()
+	projectID        = os.Getenv("PROJECT_ID")
+	sshProxyServerID = os.Getenv("SSH_PROXY_SERVER_ID")
+
+	allUUIDs = uuid.Nil.String()
 
 	reaperInterval = 60 * time.Second
 	maxIdleTimeout = 15 * time.Minute
@@ -76,13 +81,13 @@ var (
 	projectToRegionsMap    ProjectToRegionsMap    = haxmap.New[string, RegionToServicesMap]()
 )
 
-func idTokenVerifier(id *string) func(*gin.Context) {
-	sshProxyServerName := fmt.Sprintf(sshProxyServerNameTemplate, *id)
+func idTokenVerifier(config *cfg.ProxyConfig) func(*gin.Context) {
+	sshProxyServerName := fmt.Sprintf(sshProxyServerNameTemplate, config.ID)
 
 	return func(c *gin.Context) {
-		sshServerID := c.GetHeader(xServerlessSshServerId)
+		sshProxyServerID := c.GetHeader(xServerlessSshServerId)
 
-		if sshServerID != *id {
+		if sshProxyServerID != config.ID {
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
@@ -98,7 +103,7 @@ func idTokenVerifier(id *string) func(*gin.Context) {
 
 		credentials, err := google.FindDefaultCredentials(ctx)
 		if err == nil {
-			fmt.Printf("oauth2[2]: %s | %s | %+v\n", projectID, sshProxyServerName, credentials)
+			fmt.Printf("oauth2[2]: %s | %+v\n", sshProxyServerName, credentials)
 
 			oauth2Service, oauth2Err := oauth2.NewService(ctx, option.WithCredentials(credentials))
 
@@ -133,6 +138,7 @@ func idTokenVerifier(id *string) func(*gin.Context) {
 			return
 		}
 
+		c.Set(configContextKey, config)
 		// [ToDo] use `c.ClientIP()` to enforce network layer origins
 	}
 }
@@ -190,12 +196,33 @@ func sendResponse(
 	}
 }
 
-func addInstance(c *gin.Context) {
+func getProxyConfig(c *gin.Context) *cfg.ProxyConfig {
+	if config, ok := c.Get(configContextKey); ok {
+		if config, ok := config.(*cfg.ProxyConfig); ok {
+			return config
+		}
+	}
+	return nil
+}
+
+func getSSHProxyClientID(c *gin.Context, config *cfg.ProxyConfig) (*string, bool) {
 	clientID := c.GetHeader(xServerlessSshClientId)
 
 	if clientID == "" {
 		c.Status(http.StatusBadRequest)
-		c.Header(xServerlessSshServerId, *id)
+		c.Header(xServerlessSshServerId, config.ID)
+		fmt.Fprintln(c.Writer, "missing SSH_PROXY_CLIENT_ID")
+		return nil, false
+	}
+
+	return &clientID, true
+}
+
+func addInstance(c *gin.Context) {
+	proxyConfig := getProxyConfig(c)
+
+	clientID, ok := getSSHProxyClientID(c, proxyConfig)
+	if !ok {
 		return
 	}
 
@@ -213,13 +240,15 @@ func addInstance(c *gin.Context) {
 		Service:  &service,
 		Revision: &revision,
 		ID:       &instance,
-		Tunnel:   &clientID,
+		Tunnel:   clientID,
 		LastPing: &ts,
 	}
 
+	// a common instances bucket – which might be slow – is used
+	// to speed up ingress rules generation for the `Tunnel manager`
 	go instanceToConfigMap.Set(instance, config)
 
-	// revisions get their own buckets to speed up POST/DELETE operations:
+	// revisions get their own instances buckets to speed up POST/DELETE operations:
 	// there are many more instances than `project/region/service/revision` combinatoins;
 	// a Run revision with too many instances cmoing and going should mostly hotspot its bucket.
 	instanceToConfigMapProvider := func() InstanceToConfigMap {
@@ -266,15 +295,14 @@ func addInstance(c *gin.Context) {
 	}
 
 	sendResponse(c, http.StatusAccepted,
-		&project, &region, &service, &revision, &instance, &clientID)
+		&project, &region, &service, &revision, &instance, clientID)
 }
 
 func removeInstance(c *gin.Context) {
-	clientID := c.GetHeader(xServerlessSshClientId)
+	proxyConfig := getProxyConfig(c)
 
-	if clientID == "" {
-		c.Status(http.StatusBadRequest)
-		c.Header(xServerlessSshServerId, *id)
+	clientID, ok := getSSHProxyClientID(c, proxyConfig)
+	if !ok {
 		return
 	}
 
@@ -289,7 +317,7 @@ func removeInstance(c *gin.Context) {
 			if revisions, ok := services.Get(service); ok {
 				if instances, ok := revisions.Get(revision); ok {
 					if config, ok := instances.Get(instance); ok {
-						if clientID == *config.Tunnel {
+						if *clientID == *config.Tunnel {
 							if cfg, ok := instances.GetAndDel(*config.ID); ok {
 								go instanceToConfigMap.Del(*cfg.ID)
 								sendResponse(c, http.StatusAccepted,
@@ -305,7 +333,7 @@ func removeInstance(c *gin.Context) {
 	}
 
 	sendResponse(c, http.StatusNotFound,
-		&project, &region, &service, &revision, &instance, &clientID)
+		&project, &region, &service, &revision, &instance, clientID)
 }
 
 func getInstance(c *gin.Context) {
@@ -446,15 +474,28 @@ func getRevisionIngress(c *gin.Context) {
 func main() {
 	flag.Parse()
 
-	if *id == "" || *id == allUUIDs {
-		*id = allUUIDs
-	} else if _id, err := uuid.Parse(*id); err != nil {
-		*id = _id.String()
+	configYAML := configFile
+	var config *cfg.ProxyConfig
+	if c, err := cfg.LoadYAML(&configYAML); err == nil {
+		sshProxyServerID = c.ID
+		if c.ProjectID == "" {
+			c.ProjectID = projectID
+		}
+		config = c
 	} else {
-		log.Fatalf("invalid id: %v", err)
+		config = cfg.New(projectID)
 	}
 
-	fmt.Printf("use id '%s' to register instances\n", *id)
+	if sshProxyServerID == "" {
+		sshProxyServerID = allUUIDs
+	} else if id, err := uuid.Parse(sshProxyServerID); err == nil {
+		sshProxyServerID = id.String()
+	} else {
+		sshProxyServerID = allUUIDs
+	}
+	config.ID = sshProxyServerID
+
+	fmt.Printf("use id '%s' to register instances\n", config.ID)
 
 	gin.DisableConsoleColor()
 
@@ -467,7 +508,7 @@ func main() {
 	internalAPI.GET("/ingress", getIngessRules)
 
 	externalProjectAPI := externalAPI.Group(projectAPI)
-	externalProjectAPI.Use(idTokenVerifier(id))
+	externalProjectAPI.Use(idTokenVerifier(config))
 
 	internalProjectAPI := internalAPI.Group(projectAPI)
 
