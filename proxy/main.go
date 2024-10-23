@@ -100,10 +100,7 @@ func idTokenVerifier(id *string) func(*gin.Context) {
 		if err == nil {
 			fmt.Printf("oauth2[2]: %s | %s | %+v\n", projectID, sshProxyServerName, credentials)
 
-			oauth2Service, oauth2Err := oauth2.NewService(ctx,
-				option.WithCredentials(credentials),
-				option.WithQuotaProject(projectID),
-				option.WithRequestReason(sshProxyServerName))
+			oauth2Service, oauth2Err := oauth2.NewService(ctx, option.WithCredentials(credentials))
 
 			if oauth2Err == nil {
 				tokenInfoCall := oauth2Service.Tokeninfo()
@@ -135,6 +132,8 @@ func idTokenVerifier(id *string) func(*gin.Context) {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
+
+		// [ToDo] use `c.ClientIP()` to enforce network layer origins
 	}
 }
 
@@ -221,7 +220,8 @@ func addInstance(c *gin.Context) {
 	go instanceToConfigMap.Set(instance, config)
 
 	// revisions get their own buckets to speed up POST/DELETE operations:
-	// there are many more instances than `project/region/service/revision` combinatoins
+	// there are many more instances than `project/region/service/revision` combinatoins;
+	// a Run revision with too many instances cmoing and going should mostly hotspot its bucket.
 	instanceToConfigMapProvider := func() InstanceToConfigMap {
 		configMap := haxmap.New[string, *ServerlessInstance]()
 		configMap.Set(instance, config)
@@ -467,9 +467,9 @@ func main() {
 	internalAPI.GET("/ingress", getIngessRules)
 
 	externalProjectAPI := externalAPI.Group(projectAPI)
-	internalProjectAPI := internalAPI.Group(projectAPI)
-
 	externalProjectAPI.Use(idTokenVerifier(id))
+
+	internalProjectAPI := internalAPI.Group(projectAPI)
 
 	externalProjectAPI.GET("/", getProjectIngress)
 	internalProjectAPI.GET("/", getProjectIngress)

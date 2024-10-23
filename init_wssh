@@ -1,6 +1,7 @@
 #!/usr/bin/with-contenv bash
 
-export HTTP_PORT=$(cat /http.port | tr -d '\n')
+export DEFAULT_HTTP_PORT=$(cat /http.port | tr -d '\n')
+export HTTP_PORT=${PORT:-$DEFAULT_HTTP_PORT}
 
 MDS_URL='http://metadata.google.internal/computeMetadata/v1'
 MDS_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}"
