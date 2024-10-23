@@ -1,29 +1,29 @@
 services:
-  - name: ssh-server-local
-    addr: :2222
+  - name: http-server-local
+    addr: :1111
     handler:
-      type: tcp
-      chain: chain-0
+      type: rtcp
+      chain: ssh-proxy
     listener:
-      type: tcp
+      type: rtcp
     forwarder:
       nodes:
-        - name: %INSTANCE_ID%
-          addr: 127.0.0.1:2222
+        - name: "%INSTANCE_ID%"
+          addr: 127.0.0.1:1111
 
 chains:
-  - name: chain-0
+  - name: ssh-proxy
     hops:
       - name: ssh-proxy-server
         nodes:
           - name: ssh-proxy-server-tunnel
-            addr: %SSH_PROXY_SERVER_HOST%:%SSH_PROXY_SERVER_TUNNEL_PORT%
+            addr: "%SSH_PROXY_SERVER_HOST%:%SSH_PROXY_SERVER_TUNNEL_PORT%"
             connector:
               type: tunnel
               metadata:
-                tunnel.id: %SSH_PROXY_CLIENT_ID%
+                tunnel.id: "%SSH_PROXY_CLIENT_ID%"
             dialer:
               type: tls
               tls:
                 secure: false
-                serverName: %SSH_PROXY_SERVER_ID%.ssh-proxy.internal
+                serverName: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal"

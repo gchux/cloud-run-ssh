@@ -1,3 +1,5 @@
+local_only/
+local-only/
 .env
 keys/
 env/

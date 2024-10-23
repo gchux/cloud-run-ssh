@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -175,7 +174,6 @@ func getIngessRules(c *gin.Context) {
 			fmt.Fprintf(c.Writer, "%s %s", *config.ID, *config.Tunnel)
 			return true
 		})
-	fmt.Fprintln(c.Writer)
 }
 
 func sendResponse(
@@ -472,8 +470,6 @@ func getRevisionIngress(c *gin.Context) {
 }
 
 func main() {
-	flag.Parse()
-
 	configYAML := configFile
 	var config *cfg.ProxyConfig
 	if c, err := cfg.LoadYAML(&configYAML); err == nil {
@@ -500,11 +496,10 @@ func main() {
 	gin.DisableConsoleColor()
 
 	externalAPI := gin.Default()
-	internalAPI := gin.Default()
-
 	externalAPI.SetTrustedProxies(nil)
-	internalAPI.SetTrustedProxies(nil)
 
+	internalAPI := gin.Default()
+	internalAPI.SetTrustedProxies(nil)
 	internalAPI.GET("/ingress", getIngessRules)
 
 	externalProjectAPI := externalAPI.Group(projectAPI)

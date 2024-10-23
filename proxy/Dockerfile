@@ -18,7 +18,7 @@ ARG GOLANG_VERSION=1.22.4
 FROM --platform=linux/amd64 golang:${GOLANG_VERSION}-bookworm AS builder
 
 ARG GOLANG_VERSION=1.22.4
-ARG GOST_VERSION=3.0.0-rc10
+ARG GOST_VERSION=3.0.0-nightly.20241022
 ARG BIN_NAME=ssh_proxy_server
 
 WORKDIR /app
@@ -26,6 +26,7 @@ WORKDIR /app
 COPY ./go.mod go.mod
 COPY ./go.sum go.sum
 COPY ./main.go main.go
+COPY ./pkg pkg
 
 RUN go install mvdan.cc/gofumpt@latest
 

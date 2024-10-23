@@ -1,21 +1,45 @@
 services:
-  - name: %INSTANCE_ID%
+  - name: http-server
+    addr: 127.0.0.1:8443
+    handler:
+      type: forward
+    listener:
+      type: tls
+    forwarder:
+      nodes:
+        - name: ingress-container
+          addr: 127.0.0.1:%HTTP_PORT%
+          http:
+            host: "127.0.0.1:%HTTP_PORT%"
+  - name: proxy-server
+    addr: 127.0.0.1:1111
+    handler:
+      type: tcp
+      metadata:
+        sniffing: true
+    listener:
+      type: tcp
+    forwarder:
+      nodes:
+        - name: http-server-fwd
+          addr: 127.0.0.1:8443
+          filter:
+            protocol: tls
+        - name: ssh-server
+          addr: 127.0.0.1:2222
+          filter:
+            protocol: ssh
+  - name: "%INSTANCE_ID%"
     addr: :0
     handler:
-      type: rtcp
+      type: tcp
     listener:
       type: rtcp
       chain: ssh-proxy
     forwarder:
       nodes:
-        - name: ssh-server
-          addr: 127.0.0.1:2222
-
-recorders:
-  - name: recorder-0
-    file:
-      path: /dev/stderr
-      sep: "\n"
+        - name: proxy-server-fwd
+          addr: 127.0.0.1:1111
 
 chains:
   - name: ssh-proxy
@@ -23,14 +47,19 @@ chains:
       - name: ssh-proxy
         nodes:
           - name: ssh-proxy-server
-            addr: %SSH_PROXY_SERVER_HOST%:%SSH_PROXY_SERVER_PORT%
+            addr: "%SSH_PROXY_SERVER_HOST%:%SSH_PROXY_SERVER_PORT%"
             connector:
               type: tunnel
               metadata:
-                tunnel.id: %SSH_PROXY_CLIENT_ID%
+                tunnel.id: "%SSH_PROXY_CLIENT_ID%"
                 tunnel.weight: 1
             dialer:
               type: tls
               tls:
                 secure: false
-                serverName: %SSH_PROXY_SERVER_ID%.ssh-proxy.internal
+                serverName: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal"
+
+tls:
+  validity: 8760h
+  commonName: "%K_REVISION%.%K_SERVICE%.%PROJECT_NUM%.%GCP_REGION%.run.app"
+  organization: "%INSTANCE_ID%"

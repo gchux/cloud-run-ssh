@@ -11,12 +11,16 @@ export PROJECT_NUM=$(${MDS_CURL}/project/numeric-project-id)
 _GCP_REGION=$(${MDS_CURL}/instance/region)
 export GCP_REGION=${_GCP_REGION##*/}
 export INSTANCE_ID=$(${MDS_CURL}/instance/id)
-
 export INSTANCE_UUID="$(cat /proc/sys/kernel/random/uuid | tr -d '\n')"
+export CLOUD_RUN_FQDN="${K_SERVICE}-${PROJECT_NUM}.${GCP_REGION}.run.app"
 
 SSH_PROXY_SERVER_ENABLED=${ENABLE_SSH_PROXY:-false}
 if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
   echo "export MDS_URL=${MDS_URL}" > /ssh_proxy_client.env
+
+  echo "K_SERVICE=${K_SERVICE}" >> /ssh_proxy_client.env
+  echo "K_REVISION=${K_REVISION}" >> /ssh_proxy_client.env
+  echo "INSTANCE_ID=${INSTANCE_ID}" >> /ssh_proxy_client.env
 
   SSH_PROXY_SERVER_ID="${SSH_PROXY_SERVER_ID:-'00000000-0000-0000-0000-000000000000'}"
   echo "export SSH_PROXY_SERVER_ID=${SSH_PROXY_SERVER_ID}" >> /ssh_proxy_client.env
@@ -45,7 +49,12 @@ if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
     -e "s|%SSH_PROXY_CLIENT_ID%|${INSTANCE_UUID}|g" \
     -e "s|%SSH_PROXY_SERVER_HOST%|${SSH_PROXY_SERVER_HOST}|g" \
     -e "s|%SSH_PROXY_SERVER_PORT%|${SSH_PROXY_SERVER_TUNNEL_PORT}|g" \
+    -e "s|%PROJECT_NUM%|${PROJECT_NUM}|g" \
+    -e "s|%GCP_REGION%|${GCP_REGION}|g" \
+    -e "s|%K_SERVICE%|${K_SERVICE}|g" \
+    -e "s|%K_REVISION%|${K_REVISION}|g" \
     -e "s|%INSTANCE_ID%|${INSTANCE_ID}|g" \
+    -e "s|%HTTP_PORT%|${HTTP_PORT}|g" \
     /ssh_proxy_client.yaml > /tmp/ssh_proxy_client.yaml
 
   # start tunnel with SSH Proxy Server
@@ -55,7 +64,7 @@ fi
 
 SSH_SERVER_STATIC_PARAMS="hostname=localhost&port=2222&term=xterm-256color"
 
-export SSH_SERVER_URL="https://${K_SERVICE}-${PROJECT_NUM}.${GCP_REGION}.run.app"
+export SSH_SERVER_URL="https://${CLOUD_RUN_FQDN}"
 SSH_SERVER_TITLE="${PROJECT_ID}_${GCP_REGION}_${K_SERVICE}_${K_REVISION}"
 SSH_SERVER_PARAMS="${SSH_SERVER_STATIC_PARAMS}&username=${USER_NAME}&title=${SSH_SERVER_TITLE}"
 

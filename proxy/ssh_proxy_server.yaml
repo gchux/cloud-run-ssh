@@ -1,7 +1,6 @@
 services:
   - name: ssh-registry-api
     addr: :%SSH_PROXY_SERVER_API_PORT%
-    admissions:
     handler:
       type: tcp
       metadata:
@@ -22,12 +21,6 @@ services:
         ingress: ssh-proxy-ingress
     listener:
       type: tls
-
-recorders:
-  - name: recorder-0
-    file:
-      path: /dev/stderr
-      sep: "\n"
 
 ingresses:
   - name: ssh-proxy-ingress

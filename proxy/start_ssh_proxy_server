@@ -15,7 +15,7 @@ sed -e "s|%SSH_PROXY_SERVER_API_PORT%|${SSH_PROXY_SERVER_API_PORT:-$DEFAULT_SSH_
 
 cat -n /tmp/ssh_proxy_server.yaml
 
-/ssh_proxy_server -id=${SSH_PROXY_SERVER_ID:-$DEFAULT_SSH_PROXY_SERVER_ID} &
+/ssh_proxy_server &
 export SSH_PROXY_SERVER_API_PID=$!
 
 trap 'kill -TERM $SSH_PROXY_SERVER_PID' TERM INT
