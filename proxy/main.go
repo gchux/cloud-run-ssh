@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -84,9 +85,9 @@ func idTokenVerifier(config *cfg.ProxyConfig) func(*gin.Context) {
 	sshProxyServerName := fmt.Sprintf(sshProxyServerNameTemplate, config.ID)
 
 	return func(c *gin.Context) {
-		sshProxyServerID := c.GetHeader(xServerlessSshServerId)
+		_sshProxyServerID := c.GetHeader(xServerlessSshServerId)
 
-		if sshProxyServerID != config.ID {
+		if _sshProxyServerID != config.ID {
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
@@ -203,13 +204,16 @@ func getProxyConfig(c *gin.Context) *cfg.ProxyConfig {
 	return nil
 }
 
-func getSSHProxyClientID(c *gin.Context, config *cfg.ProxyConfig) (*string, bool) {
+func getSSHProxyClientID(
+	c *gin.Context,
+	config *cfg.ProxyConfig,
+) (*string, bool) {
 	clientID := c.GetHeader(xServerlessSshClientId)
 
 	if clientID == "" {
-		c.Status(http.StatusBadRequest)
 		c.Header(xServerlessSshServerId, config.ID)
-		fmt.Fprintln(c.Writer, "missing SSH_PROXY_CLIENT_ID")
+		c.AbortWithError(http.StatusBadRequest,
+			errors.New("missing SSH_PROXY_CLIENT_ID"))
 		return nil, false
 	}
 
@@ -246,7 +250,7 @@ func addInstance(c *gin.Context) {
 	// to speed up ingress rules generation for the `Tunnel manager`
 	go instanceToConfigMap.Set(instance, config)
 
-	// revisions get their own instances buckets to speed up POST/DELETE operations:
+	// revisions get their own buckets of instances to speed up POST/DELETE operations:
 	// there are many more instances than `project/region/service/revision` combinatoins;
 	// a Run revision with too many instances cmoing and going should mostly hotspot its bucket.
 	instanceToConfigMapProvider := func() InstanceToConfigMap {
@@ -292,8 +296,7 @@ func addInstance(c *gin.Context) {
 		}
 	}
 
-	sendResponse(c, http.StatusAccepted,
-		&project, &region, &service, &revision, &instance, clientID)
+	sendResponse(c, http.StatusAccepted, &project, &region, &service, &revision, &instance, clientID)
 }
 
 func removeInstance(c *gin.Context) {
@@ -319,9 +322,9 @@ func removeInstance(c *gin.Context) {
 							if cfg, ok := instances.GetAndDel(*config.ID); ok {
 								go instanceToConfigMap.Del(*cfg.ID)
 								sendResponse(c, http.StatusAccepted,
-									cfg.Project, cfg.Region, cfg.Service, cfg.Revision, cfg.ID, cfg.Tunnel)
+									cfg.Project, cfg.Region, cfg.Service,
+									cfg.Revision, cfg.ID, cfg.Tunnel)
 								return
-
 							}
 						}
 					}
@@ -332,6 +335,35 @@ func removeInstance(c *gin.Context) {
 
 	sendResponse(c, http.StatusNotFound,
 		&project, &region, &service, &revision, &instance, clientID)
+}
+
+func getInstanceByID(c *gin.Context) {
+	instance := c.Param("instance")
+
+	if instance == "" {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	if cfg, ok := instanceToConfigMap.Get(instance); ok {
+
+		if json, err := json.Marshal(*cfg); err == nil {
+			sendResponse(c, http.StatusOK,
+				cfg.Project, cfg.Region, cfg.Service,
+				cfg.Revision, cfg.ID, cfg.Tunnel)
+			c.Writer.Write(json)
+		} else {
+			sendResponse(c, http.StatusInternalServerError,
+				cfg.Project, cfg.Region, cfg.Service,
+				cfg.Revision, cfg.ID, cfg.Tunnel)
+			fmt.Fprintln(c.Writer, err.Error())
+		}
+
+		return
+	}
+
+	c.Status(http.StatusNotFound)
+	fmt.Fprintln(c.Writer, instance)
 }
 
 func getInstance(c *gin.Context) {
@@ -345,15 +377,9 @@ func getInstance(c *gin.Context) {
 		if services, ok := regions.Get(region); ok {
 			if revisions, ok := services.Get(service); ok {
 				if instances, ok := revisions.Get(revision); ok {
-					if config, ok := instances.Get(instance); ok {
-						if cfg, ok := instanceToConfigMap.Get(*config.ID); ok {
-							if json, err := json.Marshal(*cfg); err == nil {
-								sendResponse(c, http.StatusOK,
-									cfg.Project, cfg.Region, cfg.Service, cfg.Revision, cfg.ID, cfg.Tunnel)
-								c.Writer.Write(json)
-							}
-							return
-						}
+					if _, ok := instances.Get(instance); ok {
+						getInstanceByID(c)
+						return
 					}
 				}
 			}
@@ -365,6 +391,20 @@ func getInstance(c *gin.Context) {
 		&project, &region, &service, &revision, &instance, &clientID)
 }
 
+func sendIngressResponse(c *gin.Context, instances []*ServerlessInstance) {
+	var data []byte
+	var err error
+
+	if data, err = json.Marshal(instances); err != nil {
+		c.Status(http.StatusInternalServerError)
+		fmt.Fprintln(c.Writer, err.Error())
+		return
+	}
+
+	c.Status(http.StatusOK)
+	c.Writer.Write(data)
+}
+
 func getProjectIngress(c *gin.Context) {
 	project := c.Param("project")
 
@@ -373,37 +413,48 @@ func getProjectIngress(c *gin.Context) {
 		return
 	}
 
-	regions, ok := projectToRegionsMap.Get(project)
-	if !ok {
+	if _, ok := projectToRegionsMap.Get(project); !ok {
 		c.Status(http.StatusNotFound)
 		return
 	}
 
-	c.Status(http.StatusOK)
-	if json, err := regions.MarshalJSON(); err == nil {
-		c.Writer.Write(json)
-	}
+	instances := []*ServerlessInstance{}
+
+	instanceToConfigMap.ForEach(
+		func(_ string, instance *ServerlessInstance) bool {
+			if *instance.Project == project {
+				instances = append(instances, instance)
+			}
+			return true
+		})
+
+	sendIngressResponse(c, instances)
 }
 
 func getRegionIngress(c *gin.Context) {
 	project := c.Param("project")
 	region := c.Param("region")
 
-	if project == "" {
+	if project == "" || region == "" {
 		c.Status(http.StatusBadRequest)
 		return
 	}
 
 	if regions, ok := projectToRegionsMap.Get(project); ok {
-		if services, ok := regions.Get(region); ok {
-			if data, err := services.MarshalJSON(); err == nil {
-				c.Status(http.StatusOK)
-				c.Writer.Write(data)
-				return
-			} else {
-				c.Status(http.StatusInternalServerError)
-				return
-			}
+		if _, ok := regions.Get(region); ok {
+
+			instances := []*ServerlessInstance{}
+			instanceToConfigMap.ForEach(
+				func(_ string, instance *ServerlessInstance) bool {
+					if *instance.Project == project &&
+						*instance.Region == region {
+						instances = append(instances, instance)
+					}
+					return true
+				})
+
+			sendIngressResponse(c, instances)
+			return
 		}
 	}
 
@@ -415,22 +466,28 @@ func getServiceIngress(c *gin.Context) {
 	region := c.Param("region")
 	service := c.Param("service")
 
-	if project == "" {
+	if project == "" || region == "" || service == "" {
 		c.Status(http.StatusBadRequest)
 		return
 	}
 
 	if regions, ok := projectToRegionsMap.Get(project); ok {
 		if services, ok := regions.Get(region); ok {
-			if revisions, ok := services.Get(service); ok {
-				if data, err := revisions.MarshalJSON(); err == nil {
-					c.Status(http.StatusOK)
-					c.Writer.Write(data)
-					return
-				} else {
-					c.Status(http.StatusInternalServerError)
-					return
-				}
+			if _, ok := services.Get(service); ok {
+
+				instances := []*ServerlessInstance{}
+				instanceToConfigMap.ForEach(
+					func(_ string, instance *ServerlessInstance) bool {
+						if *instance.Project == project &&
+							*instance.Region == region &&
+							*instance.Service == service {
+							instances = append(instances, instance)
+						}
+						return true
+					})
+
+				sendIngressResponse(c, instances)
+				return
 			}
 		}
 	}
@@ -444,7 +501,7 @@ func getRevisionIngress(c *gin.Context) {
 	service := c.Param("service")
 	revision := c.Param("revision")
 
-	if project == "" {
+	if project == "" || region == "" || service == "" || revision == "" {
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -453,14 +510,16 @@ func getRevisionIngress(c *gin.Context) {
 		if services, ok := regions.Get(region); ok {
 			if revisions, ok := services.Get(service); ok {
 				if instances, ok := revisions.Get(revision); ok {
-					if data, err := instances.MarshalJSON(); err == nil {
-						c.Status(http.StatusOK)
-						c.Writer.Write(data)
-						return
-					} else {
-						c.Status(http.StatusInternalServerError)
-						return
-					}
+
+					_instances := []*ServerlessInstance{}
+					instances.ForEach(
+						func(_ string, instance *ServerlessInstance) bool {
+							_instances = append(_instances, instance)
+							return true
+						})
+
+					sendIngressResponse(c, _instances)
+					return
 				}
 			}
 		}
@@ -534,7 +593,11 @@ func main() {
 	internalRevisionAPI.POST(instanceAPI, addInstance)
 	internalRevisionAPI.DELETE(instanceAPI, removeInstance)
 
+	externalAPI.GET(instanceAPI, getInstanceByID)
+	internalAPI.GET(instanceAPI, getInstanceByID)
+
 	go idleInstancesReaper(&reaperInterval, &maxIdleTimeout)
+
 	go internalAPI.Run(":8888")
 	externalAPI.Run(":8080")
 }

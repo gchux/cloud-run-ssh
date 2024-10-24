@@ -27,3 +27,8 @@ chains:
               tls:
                 secure: false
                 serverName: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal"
+
+tls:
+  validity: 8760h
+  commonName: "%INSTANCE_ID%.ssh.internal"
+  organization: "%PROJECT_ID%"

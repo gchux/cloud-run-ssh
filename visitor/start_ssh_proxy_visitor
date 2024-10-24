@@ -1,6 +1,6 @@
 #! /bin/bash
 
-set -x
+JQ_CMD='/yq -M -pj -oj -I0'
 
 DEFAULT_SSH_PROXY_SERVER_API_PORT=5000
 DEFAULT_SSH_PROXY_SERVER_TUNNEL_PORT=5555
@@ -22,15 +22,19 @@ MDS_ID_TOKEN_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}/${MDS_IDENTITY_P
 
 ID_TOKEN="$(${MDS_ID_TOKEN_CURL} | tr -d '\n')"
 
-SSH_PROXY_SERVER_API_PATH="project/${PROJECT_ID}/region/${GCP_REGION}/service/${K_SERVICE}/revision/${K_REVISION}/instance/${INSTANCE_ID}"
-SSH_PROXY_SERVER_API_URL="https://${SSH_PROXY_SERVER_API_HOST_AND_PPORT}/${SSH_PROXY_SERVER_API_PATH}"
+SSH_PROXY_SERVER_API_URL="https://${SSH_PROXY_SERVER_API_HOST_AND_PPORT}/instance/${INSTANCE_ID}"
+SERVERLESS_INSTANCE=`curl -sk -H "x-s8s-ssh-authorization: ${ID_TOKEN}" -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" "${SSH_PROXY_SERVER_API_URL}" | ${JQ_CMD} 'del(.instance,.ping)' | tr -d '\n'`
 
-SSH_PROXY_CLIENT_ID=`curl -sk -H "x-s8s-ssh-authorization: ${ID_TOKEN}" -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" "${SSH_PROXY_SERVER_API_URL}" | jq -crM '.tunnel' | tr -d '\n'`
+echo "${SERVERLESS_INSTANCE}" | /yq -pj -os -rM 'del(.tunnel)'
+
+SSH_PROXY_CLIENT_ID=`echo "${SERVERLESS_INSTANCE}" | /yq -pj -oa -rM '.tunnel' | tr -d '\n'`
+echo "Discovered tunnel '${SSH_PROXY_CLIENT_ID}' for instance '${INSTANCE_ID}'":
 
 sed -e "s|%SSH_PROXY_SERVER_HOST%|${SSH_PROXY_SERVER_HOST}|g" \
   -e "s|%SSH_PROXY_SERVER_TUNNEL_PORT%|${SSH_PROXY_SERVER_TUNNEL_PORT:-$DEFAULT_SSH_PROXY_SERVER_TUNNEL_PORT}|g" \
   -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID}|g" \
   -e "s|%SSH_PROXY_CLIENT_ID%|${SSH_PROXY_CLIENT_ID}|g" \
+  -e "s|%PROJECT_ID%|${PROJECT_ID}|g" \
   -e "s|%INSTANCE_ID%|${INSTANCE_ID}|g" \
   /ssh_proxy_visitor.yaml > /tmp/ssh_proxy_visitor.yaml
 
