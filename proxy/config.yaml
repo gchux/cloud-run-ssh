@@ -1,0 +1,11 @@
+id: 00000000-0000-0000-0000-000000000000
+project_id: fake-project-1
+access_control:
+  allowed_projects:
+    - fake-project-1
+    - fake-project-2
+  allowed_identities:
+    - ssh@fake-project-2.iam.gserviceaccount.com
+  allowed_hosts:
+    - 127.0.0.1
+    - 0.0.0.0/0

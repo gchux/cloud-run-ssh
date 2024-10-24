@@ -18,6 +18,7 @@ ARG GOLANG_VERSION=1.22.4
 FROM --platform=linux/amd64 golang:${GOLANG_VERSION}-bookworm AS builder
 
 ARG GOLANG_VERSION=1.22.4
+ARG YQ_VERSION=4.44.3
 ARG GOST_VERSION=3.0.0-nightly.20241022
 ARG BIN_NAME=ssh_proxy_server
 
@@ -38,12 +39,13 @@ ENV CGO_ENABLED=0
 RUN go mod tidy -compat=${GOLANG_VERSION}
 RUN go mod download
 RUN gofumpt -l -w ./main.go
-RUN CGO_ENABLED=0 go build -a -v -o ${BIN_NAME} main.go \
-    && chmod +x ${BIN_NAME} && mv ${BIN_NAME} /${BIN_NAME}
+RUN CGO_ENABLED=0 go build -a -v -o ${BIN_NAME} main.go && mv ${BIN_NAME} /${BIN_NAME} && chmod +x /${BIN_NAME}
 
-RUN wget -O gost.tar.gz \
+RUN curl -sL -o yq https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 &&  mv -v yq /yq  && chmod +x /yq
+
+RUN curl -sL -o gost.tar.gz \
     https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_linux_amd64.tar.gz \
-    && tar -xzvf gost.tar.gz && chmod +x gost && mv -v gost /gost && rm -vf gost.tar.gz
+    && tar -xzvf gost.tar.gz && mv -v gost /gost && chmod +x /gost && rm -vf gost.tar.gz
 
 FROM --platform=linux/amd64 ubuntu:22.04
 
@@ -52,8 +54,11 @@ ARG BIN_NAME=ssh_proxy_server
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /${BIN_NAME} /ssh_proxy_server
 COPY --from=builder /gost /gost
+COPY --from=builder /yq /yq
 COPY ./ssh_proxy_server.yaml /ssh_proxy_server.yaml
 COPY ./start_ssh_proxy_server /start_ssh_proxy_server
+
+RUN mkdir -p /etc/ssh_proxy_server/
 
 ENTRYPOINT ["/start_ssh_proxy_server"]
 

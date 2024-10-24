@@ -1,16 +1,15 @@
 package config
 
 import (
-	"os"
-
 	mapset "github.com/deckarep/golang-set/v2"
-	yaml "github.com/goccy/go-yaml"
+
+	cfg "go.uber.org/config"
 )
 
 type (
 	accessControl struct {
 		AllowedProjects   []string `yaml:"allowed_projects"`
-		AllowedIdentities []string `yamls:"allowed_identities"`
+		AllowedIdentities []string `yaml:"allowed_identities"`
 		AllowedHosts      []string `yaml:"allowed_hosts"`
 	}
 
@@ -27,28 +26,26 @@ type (
 	}
 
 	ProxyConfig struct {
-		proxyConfig
+		*proxyConfig
 		AccessControl *AccessControl
 	}
 )
 
 func LoadYAML(configFile *string) (*ProxyConfig, error) {
-	data, err := os.ReadFile(*configFile)
+	provider, err := cfg.NewYAML(cfg.File(*configFile))
 	if err != nil {
 		return nil, err
 	}
 
-	var cfg proxyConfig
-	if err = yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
+	_config := proxyConfig{}
+	provider.Get(cfg.Root).Populate(&_config)
 
 	config := &ProxyConfig{
-		proxyConfig: cfg,
+		proxyConfig: &_config,
 		AccessControl: &AccessControl{
-			AllowedProjects:   mapset.NewThreadUnsafeSet(cfg.AccessControl.AllowedProjects...),
-			AllowedIdentities: mapset.NewThreadUnsafeSet(cfg.AccessControl.AllowedIdentities...),
-			AllowedHosts:      mapset.NewThreadUnsafeSet(cfg.AccessControl.AllowedHosts...),
+			AllowedProjects:   mapset.NewSet(_config.AccessControl.AllowedProjects...),
+			AllowedIdentities: mapset.NewSet(_config.AccessControl.AllowedIdentities...),
+			AllowedHosts:      mapset.NewSet(_config.AccessControl.AllowedHosts...),
 		},
 	}
 
@@ -57,7 +54,7 @@ func LoadYAML(configFile *string) (*ProxyConfig, error) {
 
 func New(projectID string) *ProxyConfig {
 	config := &ProxyConfig{
-		proxyConfig: proxyConfig{
+		proxyConfig: &proxyConfig{
 			ProjectID: projectID,
 		},
 	}

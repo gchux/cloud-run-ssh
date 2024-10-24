@@ -41,7 +41,7 @@ sed -e "s|%SSH_PROXY_SERVER_HOST%|${SSH_PROXY_SERVER_HOST}|g" \
 cat -n /tmp/ssh_proxy_visitor.yaml
 
 trap 'kill -TERM $SSH_PROXY_VISITOR_PID' TERM INT
-/gost -D -C /tmp/ssh_proxy_visitor.yaml 2>&1 &
+/gost -D -C /tmp/ssh_proxy_visitor.yaml 2>&1 | /yq -pj -oj -M &
 export SSH_PROXY_VISITOR_PID=$!
 echo "[INFO] – SSH proxy visitor started w/PID: ${SSH_PROXY_VISITOR_PID}"
 wait ${SSH_PROXY_VISITOR_PID}

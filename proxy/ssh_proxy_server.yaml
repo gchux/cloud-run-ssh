@@ -1,6 +1,7 @@
 services:
   - name: ssh-registry-api
-    addr: :%SSH_PROXY_SERVER_API_PORT%
+    addr: ":%SSH_PROXY_SERVER_API_PORT%"
+    admission: allowed-hosts
     handler:
       type: tcp
       metadata:
@@ -13,7 +14,8 @@ services:
           addr: 127.0.0.1:8080
           protocol: http
   - name: ssh-proxy
-    addr: :%SSH_PROXY_SERVER_TUNNEL_PORT%
+    addr: ":%SSH_PROXY_SERVER_TUNNEL_PORT%"
+    admission: allowed-hosts
     handler:
       type: tunnel
       metadata:
@@ -21,15 +23,13 @@ services:
         ingress: ssh-proxy-ingress
     listener:
       type: tls
-
 ingresses:
   - name: ssh-proxy-ingress
     reload: 5s
     http:
-      url: http://127.0.0.1:8888/ingress
+      url: "http://127.0.0.1:8888/ingress"
       timeout: 10s
-
 tls:
   validity: 8760h
-  commonName: %SSH_PROXY_SERVER_ID%.ssh-proxy.internal
-  organization: %SSH_PROXY_SERVER_ID%
+  commonName: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal"
+  organization: "%SSH_PROXY_SERVER_ID%"

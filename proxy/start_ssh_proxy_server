@@ -11,7 +11,11 @@ sed -e "s|%SSH_PROXY_SERVER_API_PORT%|${SSH_PROXY_SERVER_API_PORT:-$DEFAULT_SSH_
   -e "s|%SSH_PROXY_SERVER_TUNNEL_PORT%|${SSH_PROXY_SERVER_TUNNEL_PORT:-$DEFAULT_SSH_PROXY_SERVER_TUNNEL_PORT}|g" \
   -e "s|%SSH_PROXY_SERVER_PORT%|${SSH_PROXY_SERVER_PORT:-$DEFAULT_SSH_PROXY_SERVER_PORT}|g" \
   -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID:-$DEFAULT_SSH_PROXY_SERVER_ID}|g" \
-  /ssh_proxy_server.yaml > /tmp/ssh_proxy_server.yaml
+  /ssh_proxy_server.yaml > /tmp/_ssh_proxy_server.yaml
+
+/yq -M '. *= load("/tmp/_ssh_proxy_server.yaml")' \
+  <(/yq '{"admissions": [{"name": "allowed-hosts", "whitelist": true, "matchers": .access_control.allowed_hosts}]}' /etc/ssh_proxy_server/config.yaml) \
+  > /tmp/ssh_proxy_server.yaml
 
 cat -n /tmp/ssh_proxy_server.yaml
 
@@ -19,7 +23,7 @@ cat -n /tmp/ssh_proxy_server.yaml
 export SSH_PROXY_SERVER_API_PID=$!
 
 trap 'kill -TERM $SSH_PROXY_SERVER_PID' TERM INT
-/gost -D -C /tmp/ssh_proxy_server.yaml 2>&1 &
+/gost -D -C /tmp/ssh_proxy_server.yaml 2>&1 | /yq -pj -oj -M &
 export SSH_PROXY_SERVER_PID=$!
 echo "[INFO] – SSH proxy server started w/PID: ${SSH_PROXY_SERVER_PID}"
 wait ${SSH_PROXY_SERVER_PID}

@@ -10,12 +10,10 @@ import (
 	"time"
 
 	"github.com/alphadose/haxmap"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/idtoken"
-	oauth2 "google.golang.org/api/oauth2/v2"
-	"google.golang.org/api/option"
 
 	cfg "github.com/gchux/cloud-run-ssh/proxy/pkg/config"
 )
@@ -71,6 +69,10 @@ var (
 
 	reaperInterval = 60 * time.Second
 	maxIdleTimeout = 15 * time.Minute
+
+	authorizedTokenIssuers = mapset.NewSet(
+		"https://accounts.google.com",
+	)
 )
 
 var (
@@ -83,6 +85,9 @@ var (
 
 func idTokenVerifier(config *cfg.ProxyConfig) func(*gin.Context) {
 	sshProxyServerName := fmt.Sprintf(sshProxyServerNameTemplate, config.ID)
+
+	accessControl := config.AccessControl
+	allowedIdentities := accessControl.AllowedIdentities
 
 	return func(c *gin.Context) {
 		_sshProxyServerID := c.GetHeader(xServerlessSshServerId)
@@ -101,29 +106,6 @@ func idTokenVerifier(config *cfg.ProxyConfig) func(*gin.Context) {
 
 		ctx := c.Request.Context()
 
-		credentials, err := google.FindDefaultCredentials(ctx)
-		if err == nil {
-			fmt.Printf("oauth2[2]: %s | %+v\n", sshProxyServerName, credentials)
-
-			oauth2Service, oauth2Err := oauth2.NewService(ctx, option.WithCredentials(credentials))
-
-			if oauth2Err == nil {
-				tokenInfoCall := oauth2Service.Tokeninfo()
-				tokenInfoCall.IdToken(idToken)
-				tokenInfo, tokenInfoErr := tokenInfoCall.Do()
-
-				if tokenInfoErr == nil && tokenInfo.Audience == sshProxyServerName {
-					return
-				}
-
-				fmt.Println("oauth2[2]:", tokenInfoErr.Error())
-			} else {
-				fmt.Println("oauth2[3]", oauth2Err.Error())
-			}
-		} else {
-			fmt.Println("oauth2[4]", err.Error())
-		}
-
 		tokenValidator, err := idtoken.NewValidator(ctx)
 		if err != nil {
 			fmt.Println("idtoken[1]", err.Error())
@@ -131,15 +113,68 @@ func idTokenVerifier(config *cfg.ProxyConfig) func(*gin.Context) {
 			return
 		}
 
-		_, err = tokenValidator.Validate(ctx, idToken, sshProxyServerName)
+		payload, err := tokenValidator.Validate(ctx, idToken, sshProxyServerName)
 		if err != nil {
 			fmt.Println("idtoken[2]", err.Error())
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
+		if !authorizedTokenIssuers.Contains(payload.Issuer) {
+			fmt.Printf("idtoken[3]: rejected token issuer '%s'\n", payload.Issuer)
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		if sshProxyServerName != payload.Audience {
+			fmt.Printf("idtoken[4]: rejected token audience '%s'\n", payload.Audience)
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		claims := payload.Claims
+
+		identity := ""
+
+		if email, ok := claims["email"]; !ok ||
+			!allowedIdentities.Contains(email.(string)) {
+			fmt.Printf("idtoken[5]: rejected identity '%s'\n", email)
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		} else {
+			identity = email.(string)
+		}
+
+		if emailVerified, ok := claims["email_verified"]; !ok || !emailVerified.(bool) {
+			fmt.Printf("idtoken[6]: rejected identity '%s' with email not verified\n", identity)
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		fmt.Printf("allowed: '%s' into %s[%s]\n", identity, c.Request.Method, c.Request.URL.Path)
+
 		c.Set(configContextKey, config)
-		// [ToDo] use `c.ClientIP()` to enforce network layer origins
+	}
+}
+
+func projectVerifier(config *cfg.ProxyConfig) func(*gin.Context) {
+	accessControl := config.AccessControl
+	allowedProjects := accessControl.AllowedProjects
+
+	return func(c *gin.Context) {
+		project := c.Param("project")
+
+		if project == "" {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		if allowedProjects.Contains(project) {
+			return
+		}
+
+		fmt.Printf("rejected project: '%s'\n", project)
+		c.AbortWithStatus(http.StatusUnauthorized)
 	}
 }
 
@@ -529,8 +564,8 @@ func getRevisionIngress(c *gin.Context) {
 }
 
 func main() {
-	configYAML := configFile
 	var config *cfg.ProxyConfig
+	configYAML := configFile
 	if c, err := cfg.LoadYAML(&configYAML); err == nil {
 		sshProxyServerID = c.ID
 		if c.ProjectID == "" {
@@ -538,6 +573,7 @@ func main() {
 		}
 		config = c
 	} else {
+		fmt.Println(err.Error())
 		config = cfg.New(projectID)
 	}
 
@@ -556,13 +592,14 @@ func main() {
 
 	externalAPI := gin.Default()
 	externalAPI.SetTrustedProxies(nil)
+	externalAPI.Use(idTokenVerifier(config))
 
 	internalAPI := gin.Default()
 	internalAPI.SetTrustedProxies(nil)
 	internalAPI.GET("/ingress", getIngessRules)
 
 	externalProjectAPI := externalAPI.Group(projectAPI)
-	externalProjectAPI.Use(idTokenVerifier(config))
+	externalProjectAPI.Use(projectVerifier(config))
 
 	internalProjectAPI := internalAPI.Group(projectAPI)
 
