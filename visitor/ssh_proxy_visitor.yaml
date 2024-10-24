@@ -1,5 +1,5 @@
 services:
-  - name: http-server-local
+  - name: ssh-proxy-visitor
     addr: :1111
     handler:
       type: rtcp
