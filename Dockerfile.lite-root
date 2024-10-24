@@ -45,6 +45,7 @@ COPY ./init_wssh ./keys/authorized_keys* /
 COPY ./keys/*.pub /pubkeys/
 COPY ./ssh_proxy_client.yaml /ssh_proxy_client.yaml
 COPY ./poll_ssh_proxy_server /poll_ssh_proxy_server
+COPY ./cloud_run_ssh_banner /cloud_run_ssh_banner
 
 RUN apk update && apk add dpkg fuse vim busybox-extras net-tools bind-tools iproute2 \
     openssl curl wget tmux git bc traceroute tcptraceroute tcpdump mtr nmap redis \
@@ -59,6 +60,9 @@ RUN curl -o /gcsfuse.deb -L \
     && dpkg -i --force-all /gcsfuse.deb && rm -vf /gcsfuse.deb
 
 RUN echo -n "${HTTP_PORT}" > /http.port
+
+RUN sed --in-place '/Banner/d' /etc/ssh/sshd_config \
+    && echo -e '\nBanner /cloud_run_ssh_banner' >> /etc/ssh/sshd_config
 
 # see: https://github.com/linuxserver/docker-openssh-server?tab=readme-ov-file#application-setup
 RUN if [[ -f /authorized_keys ]] ; then mkdir -p /config/.ssh/ \

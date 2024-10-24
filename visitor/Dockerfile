@@ -21,7 +21,7 @@ ARG YQ_VERSION=4.44.3
 ARG GOST_VERSION=3.0.0-nightly.20241022
 
 RUN apt-get -qq update  > /dev/null \
-    && apt-get -qq -y install openssl curl > /dev/null \
+    && apt-get -qq -y install openssl openssh-client curl net-tools > /dev/null \
     && apt-get -qq clean > /dev/null
 
 COPY ./start_ssh_proxy_visitor /start_ssh_proxy_visitor

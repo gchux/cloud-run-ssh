@@ -38,13 +38,13 @@ sed -e "s|%SSH_PROXY_SERVER_HOST%|${SSH_PROXY_SERVER_HOST}|g" \
   -e "s|%INSTANCE_ID%|${INSTANCE_ID}|g" \
   /ssh_proxy_visitor.yaml > /tmp/ssh_proxy_visitor.yaml
 
-cat -n /tmp/ssh_proxy_visitor.yaml
+/gost -C /tmp/ssh_proxy_visitor.yaml &>/dev/null &
 
-trap 'kill -TERM $SSH_PROXY_VISITOR_PID' TERM INT
-/gost -D -C /tmp/ssh_proxy_visitor.yaml 2>&1 | /yq -pj -oj -M &
-export SSH_PROXY_VISITOR_PID=$!
-echo "[INFO] – SSH proxy visitor started w/PID: ${SSH_PROXY_VISITOR_PID}"
-wait ${SSH_PROXY_VISITOR_PID}
-trap - TERM INT
-wait ${SSH_PROXY_VISITOR_PID}
-echo "[INFO] – SSH proxy visitor ( PID: ${SSH_PROXY_VISITOR_PID} ) exited"
+while : ; do
+  proxy_available=`netstat -tulpan 2>/dev/null | grep -i listen | grep ':2222' | grep tcp6 | sort | uniq | wc -l | tr -d '\n'`
+  [[ "${proxy_available}" == '1' ]] && break
+  echo "waiting for proxy..."
+  sleep 1
+done
+
+ssh -v -p 2222 -i /ssh.key root@127.0.0.1

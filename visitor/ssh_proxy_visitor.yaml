@@ -1,6 +1,6 @@
 services:
   - name: ssh-proxy-visitor
-    addr: :1111
+    addr: :2222
     handler:
       type: rtcp
       chain: ssh-proxy

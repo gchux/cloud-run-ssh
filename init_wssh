@@ -14,6 +14,14 @@ export INSTANCE_ID=$(${MDS_CURL}/instance/id)
 export INSTANCE_UUID="$(cat /proc/sys/kernel/random/uuid | tr -d '\n')"
 export CLOUD_RUN_FQDN="${K_SERVICE}-${PROJECT_NUM}.${GCP_REGION}.run.app"
 
+echo "PROJECT:  ${PROJECT_ID}" >> /cloud_run_ssh_banner
+echo "REGION:   ${GCP_REGION}" >> /cloud_run_ssh_banner
+echo "SERVICE:  ${K_SERVICE}" >> /cloud_run_ssh_banner
+echo "REVISION: ${K_REVISION}" >> /cloud_run_ssh_banner
+echo "INSTANCE: ${INSTANCE_ID}" >> /cloud_run_ssh_banner
+echo "TUNNEL:   ${INSTANCE_UUID}" >> /cloud_run_ssh_banner
+echo -e '\n' >> /cloud_run_ssh_banner
+
 SSH_PROXY_SERVER_ENABLED=${ENABLE_SSH_PROXY:-false}
 if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
   echo "export MDS_URL=${MDS_URL}" > /ssh_proxy_client.env
