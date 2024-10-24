@@ -81,7 +81,7 @@ echo "credentials: ${USER_NAME}/${USER_PASSWORD}"
 echo "SSH Server URL: ${SSH_SERVER_URL}?${SSH_SERVER_PARAMS}"
 echo "SSH Server proxy command: gcloud run services proxy ${K_SERVICE} --region=${GCP_REGION} --port=${HTTP_PORT}"
 echo "SSH Server proxied URL: http://localhost:${HTTP_PORT}?${SSH_SERVER_PARAMS}"
-echo "SSH Server project/region/service/revision/instnace/tunnel: ${PROJECT_ID} ${GCP_REGION} ${K_SERVICE} ${K_REVISION} ${INSTANCE_ID} ${INSTANCE_UUID}"
+echo "SSH Server project/region/service/revision/instnace/tunnel: ${PROJECT_ID} / ${GCP_REGION} / ${K_SERVICE} / ${K_REVISION} / ${INSTANCE_ID} / ${INSTANCE_UUID}"
 
 trap 'kill -TERM $SSH_WEB_SERVER_PID' TERM INT
 # web ssh terminal: https://github.com/huashengdun/webssh
