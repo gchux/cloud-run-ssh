@@ -40,7 +40,8 @@ type (
 const (
 	configContextKey = "ssh_proxy_server_config"
 
-	configFile = "/etc/ssh_proxy_server/config.yaml"
+	configFile     = "/etc/ssh_proxy_server/config.yaml"
+	internalAPIUDS = "/ssh_proxy_server_api.sock"
 
 	sshProxyServerNameTemplate = "%s.ssh-proxy.internal"
 
@@ -74,6 +75,7 @@ var (
 
 	authorizedTokenIssuers = mapset.NewSet(
 		"https://accounts.google.com",
+		"https://accounts.google.com/",
 	)
 )
 
@@ -167,11 +169,9 @@ func projectVerifier(config *cfg.ProxyConfig) func(*gin.Context) {
 		project := c.Param("project")
 
 		if project == "" {
-			c.Status(http.StatusBadRequest)
+			c.AbortWithStatus(http.StatusBadRequest)
 			return
-		}
-
-		if allowedProjects.Contains(project) {
+		} else if allowedProjects.Contains(project) {
 			return
 		}
 
@@ -663,6 +663,6 @@ func main() {
 
 	go idleInstancesReaper(&reaperInterval, &maxIdleTimeout)
 
-	go internalAPI.RunUnix("/ssh_proxy_server_api.sock")
+	go internalAPI.RunUnix(internalAPIUDS)
 	externalAPI.Run(":8080")
 }
