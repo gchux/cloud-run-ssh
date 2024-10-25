@@ -1,0 +1,9 @@
+#!/bin/bash
+
+docker pull ssh-proxy-visitor:latest
+
+docker run -it --rm \
+        --name=ssh-proxy-visitor \
+        -e "INSTANCE_ID=${1}" \
+        --env-file=ssh.env \
+        ssh-proxy-visitor:latest
