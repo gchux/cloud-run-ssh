@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -43,16 +44,17 @@ const (
 
 	sshProxyServerNameTemplate = "%s.ssh-proxy.internal"
 
-	xProjectId            = "x-project-id"
+	xProjectID            = "x-project-id"
 	xServerlessRegion     = "x-s8s-region"
-	xServerlessProjectId  = "x-s8s-project-id"
+	xServerlessProjectID  = "x-s8s-project-id"
 	xServerlessService    = "x-s8s-service"
 	xServerlessRevision   = "x-s8s-revision"
-	xServerlessInstanceId = "x-s8s-instance-id"
+	xServerlessInstanceID = "x-s8s-instance-id"
 
-	xServerlessSshClientId      = "x-s8s-ssh-client-id"
-	xServerlessSshServerId      = "x-s8s-ssh-server-id"
-	xServerlessSshAuthorization = "x-s8s-ssh-authorization"
+	xServerlessSSHClientID      = "x-s8s-ssh-client-id"
+	xServerlessSSHServerID      = "x-s8s-ssh-server-id"
+	xServerlessSSHAuthorization = "x-s8s-ssh-authorization"
+	xServerlessSSHContentLength = "x-s8s-ssh-content-length"
 
 	projectAPI  = "/project/:project"
 	regionAPI   = "/region/:region"
@@ -90,14 +92,14 @@ func idTokenVerifier(config *cfg.ProxyConfig) func(*gin.Context) {
 	allowedIdentities := accessControl.AllowedIdentities
 
 	return func(c *gin.Context) {
-		_sshProxyServerID := c.GetHeader(xServerlessSshServerId)
+		_sshProxyServerID := c.GetHeader(xServerlessSSHServerID)
 
 		if _sshProxyServerID != config.ID {
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
 
-		idToken := c.GetHeader(xServerlessSshAuthorization)
+		idToken := c.GetHeader(xServerlessSSHAuthorization)
 
 		if idToken == "" {
 			c.AbortWithStatus(http.StatusForbidden)
@@ -219,14 +221,14 @@ func sendResponse(
 ) {
 	c.Status(status)
 
-	c.Header(xProjectId, *project)
+	c.Header(xProjectID, *project)
 	c.Header(xServerlessRegion, *region)
 	c.Header(xServerlessService, *service)
 	c.Header(xServerlessRevision, *revision)
-	c.Header(xServerlessInstanceId, *instance)
+	c.Header(xServerlessInstanceID, *instance)
 
 	if *id != "" {
-		c.Header(xServerlessSshClientId, *id)
+		c.Header(xServerlessSSHClientID, *id)
 	}
 }
 
@@ -243,10 +245,10 @@ func getSSHProxyClientID(
 	c *gin.Context,
 	config *cfg.ProxyConfig,
 ) (*string, bool) {
-	clientID := c.GetHeader(xServerlessSshClientId)
+	clientID := c.GetHeader(xServerlessSSHClientID)
 
 	if clientID == "" {
-		c.Header(xServerlessSshServerId, config.ID)
+		c.Header(xServerlessSSHServerID, config.ID)
 		c.AbortWithError(http.StatusBadRequest,
 			errors.New("missing SSH_PROXY_CLIENT_ID"))
 		return nil, false
@@ -386,6 +388,7 @@ func getInstanceByID(c *gin.Context) {
 			sendResponse(c, http.StatusOK,
 				cfg.Project, cfg.Region, cfg.Service,
 				cfg.Revision, cfg.ID, cfg.Tunnel)
+			c.Header("Content-Type", "application/json")
 			c.Writer.Write(json)
 		} else {
 			sendResponse(c, http.StatusInternalServerError,
@@ -397,8 +400,7 @@ func getInstanceByID(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusNotFound)
-	fmt.Fprintln(c.Writer, instance)
+	c.JSON(http.StatusNotFound, gin.H{"instance": instance})
 }
 
 func getInstance(c *gin.Context) {
@@ -421,23 +423,49 @@ func getInstance(c *gin.Context) {
 		}
 	}
 
-	clientID := ""
-	sendResponse(c, http.StatusNotFound,
-		&project, &region, &service, &revision, &instance, &clientID)
+	if instance != "" {
+		c.JSON(http.StatusNotFound, gin.H{"instance": instance})
+	}
 }
 
 func sendIngressResponse(c *gin.Context, instances []*ServerlessInstance) {
-	var data []byte
-	var err error
+	sizeOfInstances := len(instances)
 
-	if data, err = json.Marshal(instances); err != nil {
-		c.Status(http.StatusInternalServerError)
-		fmt.Fprintln(c.Writer, err.Error())
+	if sizeOfInstances == 0 {
+		c.Status(http.StatusNoContent)
 		return
 	}
 
 	c.Status(http.StatusOK)
-	c.Writer.Write(data)
+	c.Header("Transfer-Encoding", "chunked")
+	c.Header("Content-Type", "application/json")
+	c.Header(xServerlessSSHContentLength,
+		strconv.FormatInt(int64(sizeOfInstances), 10))
+
+	c.Writer.WriteHeaderNow()
+
+	// there can be too many instances...
+	jsonEncoder := json.NewEncoder(c.Writer)
+	for i, instance := range instances {
+		// instances are sent 1-per-line: HTTP/1.1 server stream
+		if encoderErr := jsonEncoder.Encode(gin.H{
+			"index":    i,
+			"instance": *instance,
+		}); encoderErr != nil {
+			// if encoder fails, it is not safe to use any data from `instance`
+			if data, err := json.Marshal(gin.H{
+				"index": i,
+				"error": encoderErr.Error(),
+			}); err == nil {
+				c.Writer.Write(data)
+			}
+		}
+		// references:
+		// 	- https://github.com/gin-gonic/gin/blob/v1.10.0/response_writer.go#L23
+		// 	- https://github.com/gin-gonic/gin/blob/v1.10.0/response_writer.go#L120-L124
+		// `c.Writer.Flush()` flushes headers, which have been already flushed
+		c.Writer.(http.Flusher).Flush()
+	}
 }
 
 func getProjectIngress(c *gin.Context) {
@@ -635,6 +663,6 @@ func main() {
 
 	go idleInstancesReaper(&reaperInterval, &maxIdleTimeout)
 
-	go internalAPI.Run(":8888")
+	go internalAPI.RunUnix("/ssh_proxy_server_api.sock")
 	externalAPI.Run(":8080")
 }

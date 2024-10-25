@@ -1,5 +1,13 @@
 services:
-  - name: ssh-registry-api
+  - name: ssh-proxy-server-api-internal
+    addr: ":8888"
+    admission: allowed-hosts
+    handler:
+      type: tcp
+      chain: ssh-proxy-server-api-internal
+    listener:
+      type: tcp
+  - name: ssh-proxy-server-api-external
     addr: ":%SSH_PROXY_SERVER_API_PORT%"
     admission: allowed-hosts
     handler:
@@ -23,13 +31,27 @@ services:
         ingress: ssh-proxy-ingress
     listener:
       type: tls
+
+chains:
+  - name: ssh-proxy-server-api-internal
+    hops:
+      - name: ssh-proxy-server-api-internal
+        nodes:
+          - name: ssh-proxy-server-api-internal-uds
+            addr: /ssh_proxy_server_api.sock
+            connector:
+              type: unix
+            dialer:
+              type: unix
+
 ingresses:
   - name: ssh-proxy-ingress
     reload: 5s
     http:
       url: "http://127.0.0.1:8888/ingress"
-      timeout: 10s
+      timeout: 5s
+
 tls:
   validity: 8760h
   commonName: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal"
-  organization: "%SSH_PROXY_SERVER_ID%"
+  organization: "%PROJECT_ID%"
