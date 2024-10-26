@@ -297,9 +297,9 @@ access_control:
 ### Execution
 
 ```sh
-docker kill ssh-proxy-server
+docker kill cloud-run-ssh-proxy-server
 
-docker rm ssh-proxy-server
+docker rm cloud-run-ssh-proxy-server
 
 docker pull ghcr.io/gchux/cloud-run-ssh:proxy-server-latest
 
