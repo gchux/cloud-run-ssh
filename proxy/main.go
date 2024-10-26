@@ -87,7 +87,7 @@ var (
 	projectToRegionsMap    ProjectToRegionsMap    = haxmap.New[string, RegionToServicesMap]()
 )
 
-func idTokenVerifier(config *cfg.ProxyConfig) func(*gin.Context) {
+func idTokenVerifier(config *cfg.ProxyConfig) gin.HandlerFunc {
 	sshProxyServerName := fmt.Sprintf(sshProxyServerNameTemplate, config.ID)
 
 	accessControl := config.AccessControl
@@ -161,21 +161,37 @@ func idTokenVerifier(config *cfg.ProxyConfig) func(*gin.Context) {
 	}
 }
 
-func projectVerifier(config *cfg.ProxyConfig) func(*gin.Context) {
+func accessControl(config *cfg.ProxyConfig) gin.HandlerFunc {
 	accessControl := config.AccessControl
-	allowedProjects := accessControl.AllowedProjects
+
+	validator := func(value string, whitelist mapset.Set[string]) bool {
+		return (value != "") && (whitelist.IsEmpty() || whitelist.Contains(value))
+	}
 
 	return func(c *gin.Context) {
 		project := c.Param("project")
+		region := c.Param("region")
+		service := c.Param("service")
+		revision := c.Param("revision")
 
-		if project == "" {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		} else if allowedProjects.Contains(project) {
-			return
+		if validator(project, accessControl.AllowedProjects) {
+			if validator(region, accessControl.AllowedRegions) {
+				if validator(service, accessControl.AllowedServices) {
+					if validator(revision, accessControl.AllowedRevisions) {
+						return
+					} else {
+						fmt.Fprintln(c.Writer, "rejected revision:", revision)
+					}
+				} else {
+					fmt.Fprintln(c.Writer, "rejected service:", service)
+				}
+			} else {
+				fmt.Fprintln(c.Writer, "rejected region:", region)
+			}
+		} else {
+			fmt.Fprintln(c.Writer, "rejected project:", project)
 		}
 
-		fmt.Printf("rejected project: '%s'\n", project)
 		c.AbortWithStatus(http.StatusUnauthorized)
 	}
 }
@@ -229,7 +245,7 @@ func getAllowedHosts(config *cfg.ProxyConfig) gin.HandlerFunc {
 	}
 }
 
-func sendResponse(
+func sendResponseWithHeaders(
 	c *gin.Context,
 	status int,
 	project, region, service, revision, instance, id *string,
@@ -348,7 +364,8 @@ func addInstance(c *gin.Context) {
 		}
 	}
 
-	sendResponse(c, http.StatusAccepted, &project, &region, &service, &revision, &instance, clientID)
+	sendResponseWithHeaders(c, http.StatusAccepted,
+		&project, &region, &service, &revision, &instance, clientID)
 }
 
 func removeInstance(c *gin.Context) {
@@ -373,9 +390,8 @@ func removeInstance(c *gin.Context) {
 						if *clientID == *config.Tunnel {
 							if cfg, ok := instances.GetAndDel(*config.ID); ok {
 								go instanceToConfigMap.Del(*cfg.ID)
-								sendResponse(c, http.StatusAccepted,
-									cfg.Project, cfg.Region, cfg.Service,
-									cfg.Revision, cfg.ID, cfg.Tunnel)
+								sendResponseWithHeaders(c, http.StatusAccepted,
+									cfg.Project, cfg.Region, cfg.Service, cfg.Revision, cfg.ID, cfg.Tunnel)
 								return
 							}
 						}
@@ -385,7 +401,7 @@ func removeInstance(c *gin.Context) {
 		}
 	}
 
-	sendResponse(c, http.StatusNotFound,
+	sendResponseWithHeaders(c, http.StatusNotFound,
 		&project, &region, &service, &revision, &instance, clientID)
 }
 
@@ -400,15 +416,13 @@ func getInstanceByID(c *gin.Context) {
 	if cfg, ok := instanceToConfigMap.Get(instance); ok {
 
 		if json, err := json.Marshal(*cfg); err == nil {
-			sendResponse(c, http.StatusOK,
-				cfg.Project, cfg.Region, cfg.Service,
-				cfg.Revision, cfg.ID, cfg.Tunnel)
+			sendResponseWithHeaders(c, http.StatusOK,
+				cfg.Project, cfg.Region, cfg.Service, cfg.Revision, cfg.ID, cfg.Tunnel)
 			c.Header("Content-Type", "application/json")
 			c.Writer.Write(json)
 		} else {
-			sendResponse(c, http.StatusInternalServerError,
-				cfg.Project, cfg.Region, cfg.Service,
-				cfg.Revision, cfg.ID, cfg.Tunnel)
+			sendResponseWithHeaders(c, http.StatusInternalServerError,
+				cfg.Project, cfg.Region, cfg.Service, cfg.Revision, cfg.ID, cfg.Tunnel)
 			fmt.Fprintln(c.Writer, err.Error())
 		}
 		return
@@ -630,42 +644,23 @@ func main() {
 
 	fmt.Printf("use id '%s' to register instances\n", config.ID)
 
+	go idleInstancesReaper(&reaperInterval, &maxIdleTimeout)
+
 	gin.DisableConsoleColor()
 
-	externalAPI := gin.Default()
-	externalAPI.SetTrustedProxies(nil)
-	externalAPI.Use(idTokenVerifier(config))
-
 	internalAPI := gin.Default()
-	internalAPI.SetTrustedProxies(nil)
+	internalAPI.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 	internalAPI.GET("/ingress-rules", getIngessRules)
 	internalAPI.GET("/allowed-hosts", getAllowedHosts(config))
 
-	externalProjectAPI := externalAPI.Group(projectAPI)
-	externalProjectAPI.Use(projectVerifier(config))
-
 	internalProjectAPI := internalAPI.Group(projectAPI)
-
-	externalProjectAPI.GET("/", getProjectIngress)
 	internalProjectAPI.GET("/", getProjectIngress)
-
-	externalRegionAPI := externalProjectAPI.Group(regionAPI)
-	externalRegionAPI.GET("/", getRegionIngress)
 
 	internalRegionAPI := internalProjectAPI.Group(regionAPI)
 	internalRegionAPI.GET("/", getRegionIngress)
 
-	externalServiceAPI := externalRegionAPI.Group(serviceAPI)
-	externalServiceAPI.GET("/", getServiceIngress)
-
 	internalServiceAPI := internalRegionAPI.Group(serviceAPI)
 	internalServiceAPI.GET("/", getServiceIngress)
-
-	externalRevisionAPI := externalServiceAPI.Group(revisionAPI)
-	externalRevisionAPI.GET("/", getRevisionIngress)
-	externalRevisionAPI.GET(instanceAPI, getInstance)
-	externalRevisionAPI.POST(instanceAPI, addInstance)
-	externalRevisionAPI.DELETE(instanceAPI, removeInstance)
 
 	internalRevisionAPI := internalServiceAPI.Group(revisionAPI)
 	internalRevisionAPI.GET("/", getRevisionIngress)
@@ -673,11 +668,32 @@ func main() {
 	internalRevisionAPI.POST(instanceAPI, addInstance)
 	internalRevisionAPI.DELETE(instanceAPI, removeInstance)
 
-	externalAPI.GET(instanceAPI, getInstanceByID)
 	internalAPI.GET(instanceAPI, getInstanceByID)
 
-	go idleInstancesReaper(&reaperInterval, &maxIdleTimeout)
-
 	go internalAPI.RunUnix(internalAPIUDS)
-	externalAPI.Run(":8080")
+
+	externalAPI := gin.Default()
+	externalAPI.SetTrustedProxies(config.AccessControl.AllowedHosts.ToSlice())
+	externalAPI.Use(idTokenVerifier(config))
+
+	externalProjectAPI := externalAPI.Group(projectAPI)
+	externalProjectAPI.GET("/", getProjectIngress)
+
+	externalRegionAPI := externalProjectAPI.Group(regionAPI)
+	externalRegionAPI.GET("/", getRegionIngress)
+
+	externalServiceAPI := externalRegionAPI.Group(serviceAPI)
+	externalServiceAPI.GET("/", getServiceIngress)
+
+	externalRevisionAPI := externalServiceAPI.Group(revisionAPI)
+	externalRevisionAPI.GET("/", getRevisionIngress)
+
+	accessControlFilter := accessControl(config)
+	externalRevisionAPI.GET(instanceAPI, accessControlFilter, getInstance)
+	externalRevisionAPI.POST(instanceAPI, accessControlFilter, addInstance)
+	externalRevisionAPI.DELETE(instanceAPI, accessControlFilter, removeInstance)
+
+	externalAPI.GET(instanceAPI, getInstanceByID)
+
+	externalAPI.Run("127.0.0.1:8080")
 }

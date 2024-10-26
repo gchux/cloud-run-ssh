@@ -2,10 +2,21 @@ id: 00000000-0000-0000-0000-000000000000
 project_id: fake-project-1
 access_control:
   allowed_projects:
-    - fake-project-1
-    - fake-project-2
+    - my-project-1
+    - my-project-2
+  allowed_regions:
+    - us-central1
+    - us-west4
+  allowed_services:
+    - my-service-1
+    - my-service-2
+  allowed_revisions:
+    - my-service-1-0001-abcd
+    - my-service-2-0001-abcd
   allowed_identities:
-    - ssh@fake-project-2.iam.gserviceaccount.com
+    - ssh@my-project-1.iam.gserviceaccount.com
+    - ssh@my-project-2.iam.gserviceaccount.com
   allowed_hosts:
+    - ::1
     - 127.0.0.1
-    - 0.0.0.0/0
+    - 169.254.0.0/16

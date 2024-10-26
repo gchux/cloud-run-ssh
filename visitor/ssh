@@ -1,6 +1,7 @@
 #!/bin/bash
 
 docker pull ghcr.io/gchux/cloud-run-ssh:client-latest
+
 docker tag ghcr.io/gchux/cloud-run-ssh:client-latest cloud-run-ssh-client:latest
 
 docker run -it --rm \
