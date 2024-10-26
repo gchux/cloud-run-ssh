@@ -255,7 +255,7 @@ Since all networking happens within the VPC and tunnels are encrypted end to end
 
 A pre-built Docker image is available as: `ghcr.io/gchux/cloud-run-ssh:latest`.
 
-The `SSH server sidecar` accepts the following environment variables:
+In addition to the environment variables used when running as the main –ingress– application container, the `SSH server sidecar` accepts the following:
 
 - `ENABLE_SSH_PROXY`: _boolean_ ; default value is `false`.
 - `SSH_PROXY_SERVER_HOST`: _IPv4_ ; no default value is assigned.
