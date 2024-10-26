@@ -236,7 +236,7 @@ This setup works in the following manner:
 
 2. The `SSH Proxy Server` registers the Cloud Run instance(s) and enables access via the reserved TLS tunnel.
 
-   - The `SSH Proxy Server` enforced access controls on the tunnel by restrict access to it only to specific hosts or networks; this may be the [`CIDR` ranges](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) assigned to VPC Connectors or Direct VPC.
+   - The `SSH Proxy Server` enforces access controls on the tunnel by restrict access to it only to specific hosts or networks; this may be the [`CIDR` ranges](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) assigned to VPC Connectors or Direct VPC.
 
 3. The `SSH Proxy Server` may be hosted wherever a container can be executed, provided that it has access to the `Metadata Server`; i/e: Compute Engine VM, Kubernetes Engine cluster, etc...
 
