@@ -225,7 +225,8 @@ In order to SSH into the sidecar on a running instance, you'll need:
 
 - The SSH Proxy Server: `ghcr.io/gchux/cloud-run-ssh:proxy-server-latest`
 - and the SSH client: `ghcr.io/gchux/cloud-run-ssh:client-latest`
-- Cloud Run service/revision with VPC connectivity: https://cloud.google.com/run/docs/configuring/connecting-vpc
+- Cloud Run service/revision with VPC connectivity:
+  - https://cloud.google.com/run/docs/configuring/connecting-vpc
 
 This setup works in the following manner:
 
