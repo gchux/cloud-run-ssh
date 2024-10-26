@@ -264,7 +264,7 @@ Since all networking happens within the VPC and tunnels are encrypted end to end
 > [!IMPORTANT]
 > While the `SSH Proxy Server` identity is known, the `Cloud Run SSH server sidecar` identity **must remain confidential** and only discovered via the **`SSH Proxy Server` API**.
 
-## SSH sidecar configuration
+## SSH server sidecar
 
 A pre-built Docker image is available as: `ghcr.io/gchux/cloud-run-ssh:latest`.
 
