@@ -228,7 +228,7 @@ In order to SSH into the sidecar on a running instance, you'll need:
 - Cloud Run service/revision with VPC connectivity:
   - https://cloud.google.com/run/docs/configuring/connecting-vpc
 
-This setup works in the following manner:
+This setup works by creating [bastion host](https://en.wikipedia.org/wiki/Bastion_host) ( the `SSH Proxy Server` ) through which **Cloud Run instances** are accessible but not directly routable:
 
 1. Upon startup, the `Cloud Run SSH server sidecar` creates a TLS tunnel via the `SSH Proxy Server` using the **`SSH Proxy Server` API**.
 
@@ -236,6 +236,7 @@ This setup works in the following manner:
    - The **`SSH Proxy Server` API** is served over `HTTPS` and requires the `SSH server sidecar` and `SSH Client` to provide a verifiable ID token
    - The `Cloud Run SSH server sidecar` uses the [Cloud Run service identity](https://cloud.google.com/run/docs/securing/service-identity) to generate tokens.
    - The **`SSH Proxy Server` API** enforces access controls on the project hosting **Cloud Run instances** and the **identity used by the Cloud Run service**.
+   - In order to be reachable, **Cloud Run instances** must register themselves with the `SSH Proxy Server`; otherwise, `SSH Clients` cannot connect.
 
 2. The `SSH Proxy Server` registers the available **Cloud Run instance(s)**, and enables access via the reserved TLS tunnel.
 
