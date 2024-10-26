@@ -345,8 +345,8 @@ docker run -d \
 
 > [!NOTE]
 > Port `8888` exposes the `SSH Proxy Server` API ( same as `${SSH_PROXY_SERVER_API_PORT}` ),
-> but it does NOT enforce `access_control`s other than `allowed_hosts`, nor is it served over `HTTPS`.
-> It is **stringly recommended to no expose port `8888` outisde loopback ( `localhost` ) interface**.
+> but it does NOT enforce `access_control` other than `allowed_hosts`, nor is it served over `HTTPS`.
+> It is **strongly recommended to no expose port `8888` outisde loopback ( `localhost` ) interface**.
 
 ## SSH Client ( aka SSH Proxy Visitor )
 
