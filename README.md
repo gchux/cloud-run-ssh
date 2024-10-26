@@ -217,7 +217,7 @@ gcloud run deploy ${SERVICE_NAME} \
 
 # Cloud Run SSH server sidecar
 
-As of version `2.0.0` the Cloud Run SSH Server can also be deployed as a sidecar whch will allow to troubleshoot Cloud Run instances running application code.
+As of version `v2.0.0` the Cloud Run SSH Server can also be deployed as a sidecar whch will allow to troubleshoot Cloud Run instances running application code.
 
 This operation mode does not require any modifications to the main –ingress– application container so that you can perform tests using its default configuration.
 
@@ -229,7 +229,7 @@ In order to SSH into the sidecar on a running instance, you'll need:
 
 This setup works in the following manner:
 
-1. The Cloud Run SSH server sidecar creates TLS tunnel against the `SSH Proxy Server` via the `SSH Proxy Server API`.
+1. The `Cloud Run SSH server sidecar` creates TLS tunnel against the `SSH Proxy Server` via the `SSH Proxy Server API`.
 
    - The `SSH Proxy Server API` is served over `HTTPS` and requires the `SSH server sidecar` to provide an ID token using the [Cloud Run service identity](https://cloud.google.com/run/docs/securing/service-identity).
    - The `SSH Proxy Server API` enforces access controls on the project hosting the Cloud Run instances and the identity used by the service.
