@@ -291,6 +291,7 @@ access_control:
     - ssh@my-project-2.iam.gserviceaccount.com
   allowed_hosts:
     - 127.0.0.1
+    - 169.254.0.0/16
 ```
 
 ### Execution
@@ -307,14 +308,16 @@ docker tag ghcr.io/gchux/cloud-run-ssh:proxy-server-latest cloud-run-ssh-proxy-s
 docker run -d \
         --restart=unless-stopped \
         --name=cloud-run-ssh-proxy-server \
-        -p 5555:5555 \
-        -p 5000:5000 \
-        -p 127.0.0.1:5050:5050 \
+        -p 5555:${SSH_PROXY_SERVER_TUNNEL_PORT} \
+        -p 5000:${SSH_PROXY_SERVER_API_PORT} \
         -p 127.0.0.1:8888:8888 \
         -e PROJECT_ID=${PROJECT_ID} \
         -v ./config.yaml:/etc/ssh_proxy_server/config.yaml:ro \
         cloud-run-ssh-proxy-server
 ```
+
+> [!NOTE]
+> Port `8888` exposes the `SSH Proxy Server` API (same as `${SSH_PROXY_SERVER_API_PORT}`), but is does NOT enforce access controls on `project` nor `identity`.
 
 ## SSH Client ( aka SSH Proxy Visitor )
 
@@ -354,4 +357,8 @@ docker run -it --rm \
         cloud-run-ssh-client:latest
 ```
 
-A [script that executed the `SSH Client` container](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/ssh) is also available.
+A [bash script that executed the `SSH Client` container](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/ssh) is also available;
+
+this script accepts onyl 1 argument: the Cloud Run `INSTANCE_ID` to connect; i/e: `./ssh ${INSTANCE_ID}`:
+
+![cloud_run_ssh_client](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_client.png?raw=true)
