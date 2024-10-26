@@ -357,7 +357,7 @@ docker run -it --rm \
         cloud-run-ssh-client:latest
 ```
 
-A [bash script that executed the `SSH Client` container](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/ssh) is also available;
+A [bash script that executes the `SSH Client` container](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/ssh) is also available;
 
 this script accepts onyl 1 argument: the Cloud Run `INSTANCE_ID` to connect; i/e: `./ssh ${INSTANCE_ID}`:
 
