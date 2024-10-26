@@ -232,13 +232,13 @@ This setup works by creating [bastion host](https://en.wikipedia.org/wiki/Bastio
 
 1. Upon startup, the `Cloud Run SSH server sidecar` creates a TLS tunnel via the `SSH Proxy Server` using the **`SSH Proxy Server` API**.
 
-   - The TLS tunnel created by a **Cloud Run instance** is identified by randomly generated [`UUID`](https://en.wikipedia.org/wiki/Universally_unique_identifier). This TLS tunnel ID is the **Cloud Run instance**'s identity.
-   - The **`SSH Proxy Server` API** is served over `HTTPS` and requires the `SSH server sidecar` and `SSH Client` to provide a verifiable ID token
+   - The TLS tunnel created by a **Cloud Run instance** is identified by a randomly generated [`UUID`](https://en.wikipedia.org/wiki/Universally_unique_identifier). This TLS tunnel ID is the **Cloud Run instance**'s identity.
+   - The **`SSH Proxy Server` API** is served over `HTTPS` and requires the `SSH server sidecar` and `SSH Client` to provide a verifiable ID token.
    - The `Cloud Run SSH server sidecar` uses the [Cloud Run service identity](https://cloud.google.com/run/docs/securing/service-identity) to generate tokens.
    - The **`SSH Proxy Server` API** enforces access controls on the project hosting **Cloud Run instances** and the **identity used by the Cloud Run service**.
    - In order to be reachable, **Cloud Run instances** must register themselves with the `SSH Proxy Server`; otherwise, `SSH Clients` cannot connect.
 
-2. The `SSH Proxy Server` registers the available **Cloud Run instance(s)**, and enables access via the reserved TLS tunnel.
+2. The `SSH Proxy Server` registers the available **Cloud Run instance(s)**, and enables access via the reserved TLS tunnels.
 
    - The `SSH Proxy Server` enforces access controls on the TLS tunnel by restricting access to specific hosts or networks.
      - Allowed hosts must include the [`CIDR` ranges](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) assigned to VPC Connectors or Direct VPC.
