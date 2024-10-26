@@ -11,13 +11,9 @@ sed -e "s|%SSH_PROXY_SERVER_API_PORT%|${SSH_PROXY_SERVER_API_PORT:-$DEFAULT_SSH_
   -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID:-$DEFAULT_SSH_PROXY_SERVER_ID}|g" \
   -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID:-$DEFAULT_SSH_PROXY_SERVER_ID}|g" \
   -e "s|%PROJECT_ID%|${PROJECT_ID}|g" \
-  /ssh_proxy_server.yaml > /tmp/_ssh_proxy_server.yaml
+  /ssh_proxy_server.yaml > /tmp/ssh_proxy_server.yaml
 
-/yq -M '. *= load("/tmp/_ssh_proxy_server.yaml")' \
-  <(/yq '{"admissions": [{"name": "allowed-hosts", "whitelist": true, "matchers": .access_control.allowed_hosts}]}' /etc/ssh_proxy_server/config.yaml) \
-  > /tmp/ssh_proxy_server.yaml
-
-cat -n /tmp/ssh_proxy_server.yaml
+/yq -py -oy -M /tmp/ssh_proxy_server.yaml | cat -n
 
 /ssh_proxy_server &
 export SSH_PROXY_SERVER_API_PID=$!

@@ -212,3 +212,146 @@ gcloud run deploy ${SERVICE_NAME} \
 
 > [!TIP]
 > In order to avoid having to handle access management for all users, it is better/simpler to provide `user`, `password`, `Public key` and `authorized_keys` as secrets via environment variable or volume mounts.
+
+---
+
+# Cloud Run SSH server sidecar
+
+As of version `2.0.0` the Cloud Run SSH Server can also be deployed as a sidecar whch will allow to troubleshoot Cloud Run instances running application code.
+
+This operation mode does not require any modifications to the main –ingress– application container so that you can perform tests using its default configuration.
+
+In order to SSH into the sidecar on a running instance, you'll need:
+
+- The SSH Proxy Server: `ghcr.io/gchux/cloud-run-ssh:proxy-server-latest`
+- and the SSH client: `ghcr.io/gchux/cloud-run-ssh:client-latest`
+- Cloud Run service/revision with VPC connectivity: https://cloud.google.com/run/docs/configuring/connecting-vpc
+
+This setup works in the following manner:
+
+1. The Cloud Run SSH server sidecar creates TLS tunnel against the `SSH Proxy Server` via the `SSH Proxy Server API`.
+
+   - The `SSH Proxy Server API` is served over `HTTPS` and requires the `SSH server sidecar` to provide an ID token using the [Cloud Run service identity](https://cloud.google.com/run/docs/securing/service-identity).
+   - The `SSH Proxy Server API` enforces access controls on the project hosting the Cloud Run instances and the identity used by the service.
+
+2. The `SSH Proxy Server` registers the Cloud Run instance(s) and enables access via the reserved TLS tunnel.
+
+   - The `SSH Proxy Server` enforced access controls on the tunnel by restrict access to it only to specific hosts or networks; this may be the [`CIDR` ranges](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing) assigned to VPC Connectors or Direct VPC.
+
+3. The `SSH Proxy Server` may be hosted wherever a container can be executed, provided that it has access to the `Metadata Server`; i/e: Compute Engine VM, Kubernetes Engine cluster, etc...
+
+   - The `SSH Proxy Server` identity is a user defined valid [`UUID`](https://en.wikipedia.org/wiki/Universally_unique_identifier) which is verified by both the `SSH server sidecar` and the `SSH Client` before registering and using the TLS tunnel.
+   - The `SSH Proxy Server` API and Tunnel ports can be adjusted; the default values are: `5000` for the API, and `5555` for the Tunnel.
+
+4. The [`SSH Client`](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/ssh) ( aka the **SSH Proxy Visitor** ) uses the `SSH Proxy Server API` to resolve a Cloud Run instance id into the correct TLS tunnel to be used.
+5. The [`SSH Client`](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/ssh) uses the TLS tunnel to connect to a running **Cloud Run instance SSH sidecar** via the `SSH Proxy Server`.
+
+![cloud_run_ssh_proxy](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_proxy.png?raw=true)
+
+Since all networking happens within the VPC and tunnels are encrypted end to end, connecting into running instances is safe and secure.
+
+## SSH sidecar configuration
+
+A pre-built Docker image is available as: `ghcr.io/gchux/cloud-run-ssh:latest`.
+
+The `SSH server sidecar` accepts the following environment variables:
+
+- `ENABLE_SSH_PROXY`: _boolean_ ; default value is `false`.
+- `SSH_PROXY_SERVER_HOST`: _IPv4_ ; no default value is assigned.
+- `SSH_PROXY_SERVER_API_PORT` _uint16_ ; default value is `5000`.
+- `SSH_PROXY_SERVER_TUNNEL_PORT`: _uint16_ ; default value is `5555`.
+- `SSH_PROXY_SERVER_ID`: _uuid_ ; default value is `00000000-0000-0000-0000-000000000000`.
+
+## SSH Proxy Server
+
+A pre-built Docker image is available as: `ghcr.io/gchux/cloud-run-ssh:proxy-server-latest`.
+
+### Configuration
+
+The `SSH Proxy Server` requires a [`YAML` configuraiton file](https://github.com/gchux/cloud-run-ssh/blob/main/proxy/sample_config.yaml) which must be mounted at `/etc/ssh_proxy_server/config.yaml`.
+
+- `id`: _uuid_ ; the `SSH Proxy Server` identity.
+- `project_id`: _string_ ; the GCP Project ID hosting the `SSH Proxy Server`.
+- `access_control.allowed_projects`: _list[string]_ ; Cloud Run allowed projects.
+- `access_control.allowed_identities`: _list[email]_ ; identities allowed to consume the `SSH Proxy Server` API.
+- `access_control.allowed_hosts`: _list[IPv4|IPv6|CIDR]_ ; hosts which are allowed to consume the `SSH Proxy Server` API and Tunnels.
+  - **Must include**: VPC Connectors or Direct VPC [`CIDR` ranges](https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing), and the allowed subnets where `SSH Clients` will be connecting from.
+
+#### Sample Configuration
+
+```yaml
+id: 00000000-0000-0000-0000-000000000000
+project_id: my-project-1
+access_control:
+  allowed_projects:
+    - my-project-1
+    - my-project-2
+  allowed_identities:
+    - ssh@my-project-1.iam.gserviceaccount.com
+    - ssh@my-project-2.iam.gserviceaccount.com
+  allowed_hosts:
+    - 127.0.0.1
+```
+
+### Execution
+
+```sh
+docker kill ssh-proxy-server
+
+docker rm ssh-proxy-server
+
+docker pull ghcr.io/gchux/cloud-run-ssh:proxy-server-latest
+
+docker tag ghcr.io/gchux/cloud-run-ssh:proxy-server-latest cloud-run-ssh-proxy-server
+
+docker run -d \
+        --restart=unless-stopped \
+        --name=cloud-run-ssh-proxy-server \
+        -p 5555:5555 \
+        -p 5000:5000 \
+        -p 127.0.0.1:5050:5050 \
+        -p 127.0.0.1:8888:8888 \
+        -e PROJECT_ID=${PROJECT_ID} \
+        -v ./config.yaml:/etc/ssh_proxy_server/config.yaml:ro \
+        cloud-run-ssh-proxy-server
+```
+
+## SSH Client ( aka SSH Proxy Visitor )
+
+A pre-built Docker image is available as: `ghcr.io/gchux/cloud-run-ssh:client-latest`
+
+### Environment
+
+The `SSH Client` container requies the following [environment variables](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/sample_ssh.env):
+
+- `PROJECT_ID`: _string_ ; GCP Project ID hosting the client.
+- `SSH_PROXY_SERVER_HOST`: _IPv4_ ; `IP` assigned to the host running the `SSH Proxy Server`.
+- `SSH_PROXY_SERVER_API_PORT` _uint16_ ; `SSH Proxy Server` API port.
+- `SSH_PROXY_SERVER_TUNNEL_PORT`: _uint16_ ; `SSH Proxy Server` Tunnel port.
+- `SSH_PROXY_SERVER_ID`: _uuid_ ; `SSH Proxy Server` identity.
+
+#### Sample Environment
+
+```sh
+PROJECT_ID=my-project-1
+SSH_PROXY_SERVER_HOST=${SSH_PROXY_SERVER_HOST}
+SSH_PROXY_SERVER_API_PORT=5000
+SSH_PROXY_SERVER_TUNNEL_PORT=5555
+SSH_PROXY_SERVER_ID=00000000-0000-0000-0000-000000000000
+```
+
+### Execution
+
+```sh
+docker pull ghcr.io/gchux/cloud-run-ssh:client-latest
+
+docker tag ghcr.io/gchux/cloud-run-ssh:client-latest cloud-run-ssh-client:latest
+
+docker run -it --rm \
+        --name=cloud-run-ssh-client \
+        -e "INSTANCE_ID=${INSTANCE_ID}" \
+        --env-file=ssh.env \
+        cloud-run-ssh-client:latest
+```
+
+A [script that executed the `SSH Client` container](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/ssh) is also available.

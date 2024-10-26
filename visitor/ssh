@@ -1,9 +1,10 @@
 #!/bin/bash
 
-docker pull ssh-proxy-visitor:latest
+docker pull ghcr.io/gchux/cloud-run-ssh:client-latest
+docker tag ghcr.io/gchux/cloud-run-ssh:client-latest cloud-run-ssh-client:latest
 
 docker run -it --rm \
-        --name=ssh-proxy-visitor \
+        --name=cloud-run-ssh-client \
         -e "INSTANCE_ID=${1}" \
         --env-file=ssh.env \
-        ssh-proxy-visitor:latest
+        cloud-run-ssh-client:latest

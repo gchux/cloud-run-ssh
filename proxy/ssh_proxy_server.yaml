@@ -1,7 +1,7 @@
 services:
   - name: ssh-proxy-server-api-internal
     addr: ":8888"
-    admission: allowed-hosts
+    admission: ssh-proxy-allowed-hosts
     handler:
       type: tcp
       chain: ssh-proxy-server-api-internal
@@ -9,7 +9,7 @@ services:
       type: tcp
   - name: ssh-proxy-server-api-external
     addr: ":%SSH_PROXY_SERVER_API_PORT%"
-    admission: allowed-hosts
+    admission: ssh-proxy-allowed-hosts
     handler:
       type: tcp
       metadata:
@@ -23,12 +23,12 @@ services:
           protocol: http
   - name: ssh-proxy
     addr: ":%SSH_PROXY_SERVER_TUNNEL_PORT%"
-    admission: allowed-hosts
+    admission: ssh-proxy-allowed-hosts
     handler:
       type: tunnel
       metadata:
         tunnel.direct: true
-        ingress: ssh-proxy-ingress
+        ingress: ssh-proxy-ingress-rules
     listener:
       type: tls
 
@@ -45,10 +45,22 @@ chains:
               type: unix
 
 ingresses:
-  - name: ssh-proxy-ingress
+  - name: ssh-proxy-ingress-rules
     reload: 5s
     http:
-      url: "http://127.0.0.1:8888/ingress"
+      url: "http://127.0.0.1:8888/ingress-rules"
+      timeout: 5s
+
+admissions:
+  - name: ssh-proxy-allowed-hosts
+    whitelist: true
+    matchers:
+      - ::1
+      - 127.0.0.1
+      - 169.254.0.0/16
+    reload: 5s
+    http:
+      url: "http://127.0.0.1:8888/allowed-hosts"
       timeout: 5s
 
 tls:

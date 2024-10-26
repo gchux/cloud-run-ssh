@@ -209,9 +209,24 @@ func getIngessRules(c *gin.Context) {
 	c.Writer.WriteHeaderNow()
 	instanceToConfigMap.ForEach(
 		func(_ string, config *ServerlessInstance) bool {
-			fmt.Fprintf(c.Writer, "%s %s", *config.ID, *config.Tunnel)
+			fmt.Fprintln(c.Writer, *config.ID, *config.Tunnel)
 			return true
 		})
+}
+
+func getAllowedHosts(config *cfg.ProxyConfig) gin.HandlerFunc {
+	accessControl := config.AccessControl
+	allowedHosts := accessControl.AllowedHosts
+
+	return func(c *gin.Context) {
+		c.Status(http.StatusOK)
+		c.Header("Content-Type", "text/plain")
+		c.Writer.WriteHeaderNow()
+		allowedHosts.Each(func(host string) bool {
+			fmt.Fprintln(c.Writer, host)
+			return false
+		})
+	}
 }
 
 func sendResponse(
@@ -396,7 +411,6 @@ func getInstanceByID(c *gin.Context) {
 				cfg.Revision, cfg.ID, cfg.Tunnel)
 			fmt.Fprintln(c.Writer, err.Error())
 		}
-
 		return
 	}
 
@@ -463,7 +477,7 @@ func sendIngressResponse(c *gin.Context, instances []*ServerlessInstance) {
 		// references:
 		// 	- https://github.com/gin-gonic/gin/blob/v1.10.0/response_writer.go#L23
 		// 	- https://github.com/gin-gonic/gin/blob/v1.10.0/response_writer.go#L120-L124
-		// `c.Writer.Flush()` flushes headers, which have been already flushed
+		// `c.Writer.Flush()` also flushes headers, which have been already sent via `c.Writer.WriteHeaderNow()`
 		c.Writer.(http.Flusher).Flush()
 	}
 }
@@ -624,7 +638,8 @@ func main() {
 
 	internalAPI := gin.Default()
 	internalAPI.SetTrustedProxies(nil)
-	internalAPI.GET("/ingress", getIngessRules)
+	internalAPI.GET("/ingress-rules", getIngessRules)
+	internalAPI.GET("/allowed-hosts", getAllowedHosts(config))
 
 	externalProjectAPI := externalAPI.Group(projectAPI)
 	externalProjectAPI.Use(projectVerifier(config))
