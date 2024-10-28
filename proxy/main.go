@@ -35,6 +35,8 @@ type (
 	ServiceToRevisionsMap  = *haxmap.Map[string, RevisionToInstancesMap]
 	RegionToServicesMap    = *haxmap.Map[string, ServiceToRevisionsMap]
 	ProjectToRegionsMap    = *haxmap.Map[string, RegionToServicesMap]
+
+	APIPathParam = string
 )
 
 const (
@@ -62,6 +64,14 @@ const (
 	serviceAPI  = "/service/:service"
 	revisionAPI = "/revision/:revision"
 	instanceAPI = "/instance/:instance"
+)
+
+const (
+	PROJECT  APIPathParam = "project"
+	REGION   APIPathParam = "regions"
+	SERVICE  APIPathParam = "service"
+	REVISION APIPathParam = "revision"
+	INSTANCE APIPathParam = "instance"
 )
 
 var (
@@ -169,10 +179,10 @@ func accessControl(config *cfg.ProxyConfig) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
-		project := c.Param("project")
-		region := c.Param("region")
-		service := c.Param("service")
-		revision := c.Param("revision")
+		project := c.Param(PROJECT)
+		region := c.Param(REGION)
+		service := c.Param(SERVICE)
+		revision := c.Param(REVISION)
 
 		if validator(project, accessControl.AllowedProjects) {
 			if validator(region, accessControl.AllowedRegions) {
@@ -296,11 +306,11 @@ func addInstance(c *gin.Context) {
 		return
 	}
 
-	project := c.Param("project")
-	region := c.Param("region")
-	service := c.Param("service")
-	revision := c.Param("revision")
-	instance := c.Param("instance")
+	project := c.Param(PROJECT)
+	region := c.Param(REGION)
+	service := c.Param(SERVICE)
+	revision := c.Param(REVISION)
+	instance := c.Param(INSTANCE)
 
 	ts := time.Now()
 
@@ -376,11 +386,11 @@ func removeInstance(c *gin.Context) {
 		return
 	}
 
-	project := c.Param("project")
-	region := c.Param("region")
-	service := c.Param("service")
-	revision := c.Param("revision")
-	instance := c.Param("instance")
+	project := c.Param(PROJECT)
+	region := c.Param(REGION)
+	service := c.Param(SERVICE)
+	revision := c.Param(REVISION)
+	instance := c.Param(INSTANCE)
 
 	if regions, ok := projectToRegionsMap.Get(project); ok {
 		if services, ok := regions.Get(region); ok {
@@ -406,7 +416,7 @@ func removeInstance(c *gin.Context) {
 }
 
 func getInstanceByID(c *gin.Context) {
-	instance := c.Param("instance")
+	instance := c.Param(INSTANCE)
 
 	if instance == "" {
 		c.Status(http.StatusBadRequest)
@@ -432,11 +442,11 @@ func getInstanceByID(c *gin.Context) {
 }
 
 func getInstance(c *gin.Context) {
-	project := c.Param("project")
-	region := c.Param("region")
-	service := c.Param("service")
-	revision := c.Param("revision")
-	instance := c.Param("instance")
+	project := c.Param(PROJECT)
+	region := c.Param(REGION)
+	service := c.Param(SERVICE)
+	revision := c.Param(REVISION)
+	instance := c.Param(INSTANCE)
 
 	if regions, ok := projectToRegionsMap.Get(project); ok {
 		if services, ok := regions.Get(region); ok {
@@ -497,7 +507,7 @@ func sendIngressResponse(c *gin.Context, instances []*ServerlessInstance) {
 }
 
 func getProjectIngress(c *gin.Context) {
-	project := c.Param("project")
+	project := c.Param(PROJECT)
 
 	if project == "" {
 		c.Status(http.StatusBadRequest)
@@ -523,8 +533,8 @@ func getProjectIngress(c *gin.Context) {
 }
 
 func getRegionIngress(c *gin.Context) {
-	project := c.Param("project")
-	region := c.Param("region")
+	project := c.Param(PROJECT)
+	region := c.Param(REGION)
 
 	if project == "" || region == "" {
 		c.Status(http.StatusBadRequest)
@@ -553,9 +563,9 @@ func getRegionIngress(c *gin.Context) {
 }
 
 func getServiceIngress(c *gin.Context) {
-	project := c.Param("project")
-	region := c.Param("region")
-	service := c.Param("service")
+	project := c.Param(PROJECT)
+	region := c.Param(REGION)
+	service := c.Param(SERVICE)
 
 	if project == "" || region == "" || service == "" {
 		c.Status(http.StatusBadRequest)
@@ -587,10 +597,10 @@ func getServiceIngress(c *gin.Context) {
 }
 
 func getRevisionIngress(c *gin.Context) {
-	project := c.Param("project")
-	region := c.Param("region")
-	service := c.Param("service")
-	revision := c.Param("revision")
+	project := c.Param(PROJECT)
+	region := c.Param(REGION)
+	service := c.Param(SERVICE)
+	revision := c.Param(REVISION)
 
 	if project == "" || region == "" || service == "" || revision == "" {
 		c.Status(http.StatusBadRequest)
@@ -648,6 +658,8 @@ func main() {
 
 	gin.DisableConsoleColor()
 
+	// API endpoints that should be available internally
+
 	internalAPI := gin.Default()
 	internalAPI.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 	internalAPI.GET("/ingress-rules", getIngessRules)
@@ -670,7 +682,10 @@ func main() {
 
 	internalAPI.GET(instanceAPI, getInstanceByID)
 
+	// internal API is server using UDS
 	go internalAPI.RunUnix(internalAPIUDS)
+
+	// API endpoints that should be available externally
 
 	externalAPI := gin.Default()
 	externalAPI.SetTrustedProxies(config.AccessControl.AllowedHosts.ToSlice())

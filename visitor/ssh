@@ -8,4 +8,6 @@ docker run -it --rm \
         --name=cloud-run-ssh-client \
         -e "INSTANCE_ID=${1}" \
         --env-file=ssh.env \
-        cloud-run-ssh-client:latest
+        --network=host \
+        cloud-run-ssh-client:latest \
+        "${@:1}"

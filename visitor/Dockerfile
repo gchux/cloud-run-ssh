@@ -27,10 +27,8 @@ RUN apt-get -qq update  > /dev/null \
 COPY ./start_ssh_proxy_visitor /start_ssh_proxy_visitor
 COPY ./ssh_proxy_visitor.yaml /ssh_proxy_visitor.yaml
 
-RUN curl -sL -o yq https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 && chmod +x yq
-
-RUN curl -sL -o gost.tar.gz \
-    https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_linux_amd64.tar.gz \
+RUN curl -sL -o yq https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 && chmod +x yq \
+    && curl -sL -o gost.tar.gz https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_linux_amd64.tar.gz \
     && tar -xzvf gost.tar.gz && chmod +x gost && rm -vf gost.tar.gz
 
 ENTRYPOINT ["/start_ssh_proxy_visitor"]

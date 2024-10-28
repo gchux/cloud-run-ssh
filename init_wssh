@@ -1,7 +1,7 @@
 #!/usr/bin/with-contenv bash
 
 export DEFAULT_HTTP_PORT=$(cat /http.port | tr -d '\n')
-export HTTP_PORT=${PORT:-$DEFAULT_HTTP_PORT}
+export SSH_HTTP_PORT=${PORT:-$DEFAULT_HTTP_PORT}
 
 MDS_URL='http://metadata.google.internal/computeMetadata/v1'
 MDS_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}"
@@ -62,7 +62,8 @@ if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
     -e "s|%K_SERVICE%|${K_SERVICE}|g" \
     -e "s|%K_REVISION%|${K_REVISION}|g" \
     -e "s|%INSTANCE_ID%|${INSTANCE_ID}|g" \
-    -e "s|%HTTP_PORT%|${HTTP_PORT}|g" \
+    -e "s|%APP_HTTP_PORT%|${APP_HTTP_PORT:8080}|g" \
+    -e "s|%SSH_HTTP_PORT%|${SSH_HTTP_PORT}|g" \
     /ssh_proxy_client.yaml > /tmp/ssh_proxy_client.yaml
 
   # start tunnel with SSH Proxy Server
@@ -79,13 +80,13 @@ SSH_SERVER_PARAMS="${SSH_SERVER_STATIC_PARAMS}&username=${USER_NAME}&title=${SSH
 echo "credentials: ${USER_NAME}/${USER_PASSWORD}"
 
 echo "SSH Server URL: ${SSH_SERVER_URL}?${SSH_SERVER_PARAMS}"
-echo "SSH Server proxy command: gcloud run services proxy ${K_SERVICE} --region=${GCP_REGION} --port=${HTTP_PORT}"
-echo "SSH Server proxied URL: http://localhost:${HTTP_PORT}?${SSH_SERVER_PARAMS}"
+echo "SSH Server proxy command: gcloud run services proxy ${K_SERVICE} --region=${GCP_REGION} --port=${SSH_HTTP_PORT}"
+echo "SSH Server proxied URL: http://localhost:${SSH_HTTP_PORT}?${SSH_SERVER_PARAMS}"
 echo "SSH Server project/region/service/revision/instnace/tunnel: ${PROJECT_ID} / ${GCP_REGION} / ${K_SERVICE} / ${K_REVISION} / ${INSTANCE_ID} / ${INSTANCE_UUID}"
 
 trap 'kill -TERM $SSH_WEB_SERVER_PID' TERM INT
 # web ssh terminal: https://github.com/huashengdun/webssh
-wssh --address='0.0.0.0' --port=${HTTP_PORT} \
+wssh --address='0.0.0.0' --port=${SSH_HTTP_PORT} \
   --encoding='utf-8' --xheaders=True --debug=True \
   --origin='*' --policy=autoadd --log_to_stderr \
   --logging=debug --redirect=False --fbidhttp=False \

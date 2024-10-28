@@ -17,7 +17,7 @@ export SSH_PROXY_SERVER_NAME=`openssl s_client -connect "${SSH_PROXY_SERVER_API_
 
 if [[ "${SSH_PROXY_SERVER_NAME}" != "${EXPECTED_SSH_PROXY_SERVER_NAME}" ]]; then
   echo "SSH Proxy Server identity could not be verified: ${EXPECTED_SSH_PROXY_SERVER_NAME} - ${SSH_PROXY_SERVER_NAME}"
-  exit 0
+  exit 1
 fi
 
 MDS_URL='http://metadata.google.internal/computeMetadata/v1'
@@ -54,7 +54,7 @@ done
 sleep 1
 
 if [[ -s "/ssh.key" ]]; then
-  ssh -v -p ${SSH_PORT} -i /ssh.key root@${SSH_HOST}
+  ssh -p ${SSH_PORT} "${@:2}" -i /ssh.key root@${SSH_HOST}
 else
-  ssh -v -p ${SSH_PORT} root@${SSH_HOST}
+  ssh -p ${SSH_PORT} "${@:2}" root@${SSH_HOST}
 fi
