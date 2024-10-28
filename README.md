@@ -221,7 +221,7 @@ As of version `v2.0.0` the **`Cloud Run SSH Server`** can also be deployed as a 
 
 This operation mode does not require any modifications to the main –ingress– application container so that you can perform tests using its default configuration.
 
-In order to SSH into the sidecar on a running instance, you'll need:
+In order to SSH into the sidecar in any **Cloud Run running instance**, you'll need:
 
 - The SSH Proxy Server: `ghcr.io/gchux/cloud-run-ssh:proxy-server-latest`
 - and the SSH client: `ghcr.io/gchux/cloud-run-ssh:client-latest`
