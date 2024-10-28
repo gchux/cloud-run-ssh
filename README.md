@@ -387,15 +387,12 @@ docker run -it --rm \
 ```
 
 A [bash script that executes the `SSH Client` container](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/ssh) is also available;
-
 this script requires the 1st argument to be the **Cloud Run `INSTANCE_ID`** to connect; i/e: `./ssh ${INSTANCE_ID}`.
 
 After the **Cloud Run instance ID** you may use any valid [`OpenSSH client` arguments](https://man.openbsd.org/ssh),
-
 except for [`-p` or **port**](https://man.openbsd.org/ssh#p) as it is reserved for the TLS tunnel ( `TCP::2222` ) to deliver all traffic to the **Cloud Run instance**.
 
 In general, the most useful flag is local port forward or [`-L`](https://man.openbsd.org/ssh#L) which you may use to forward traffic
-
 from a local TCP port into a remote TCP port available in the **Cloud Run instance** itself or any other remote host reachable/routable from the **Cloud Run instance**.
 
 #### Sample `SSH Client` Execution
