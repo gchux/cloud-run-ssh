@@ -381,9 +381,11 @@ docker tag ghcr.io/gchux/cloud-run-ssh:client-latest cloud-run-ssh-client:latest
 
 docker run -it --rm \
         --name=cloud-run-ssh-client \
-        -e "INSTANCE_ID=${INSTANCE_ID}" \
+        -e "INSTANCE_ID=${1}" \
         --env-file=ssh.env \
-        cloud-run-ssh-client:latest
+        --network=host \
+        cloud-run-ssh-client:latest \
+        "${@:1}"
 ```
 
 A [bash script that executes the `SSH Client` container](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/ssh) is also available;
