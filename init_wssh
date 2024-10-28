@@ -84,6 +84,8 @@ echo "SSH Server proxy command: gcloud run services proxy ${K_SERVICE} --region=
 echo "SSH Server proxied URL: http://localhost:${SSH_HTTP_PORT}?${SSH_SERVER_PARAMS}"
 echo "SSH Server project/region/service/revision/instnace/tunnel: ${PROJECT_ID} / ${GCP_REGION} / ${K_SERVICE} / ${K_REVISION} / ${INSTANCE_ID} / ${INSTANCE_UUID}"
 
+ssh-keyscan -p 2222 127.0.0.1 2>/dev/null
+
 trap 'kill -TERM $SSH_WEB_SERVER_PID' TERM INT
 # web ssh terminal: https://github.com/huashengdun/webssh
 wssh --address='0.0.0.0' --port=${SSH_HTTP_PORT} \
