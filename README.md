@@ -217,7 +217,7 @@ gcloud run deploy ${SERVICE_NAME} \
 
 # Cloud Run SSH server sidecar
 
-As of version `v2.0.0` the Cloud Run SSH Server can also be deployed as a sidecar whch will allow to troubleshoot Cloud Run instances running application code.
+As of version `v2.0.0` the **`Cloud Run SSH Server`** can also be deployed as a sidecar which allows to **individually access and troubleshoot Cloud Run instances** running application code.
 
 This operation mode does not require any modifications to the main –ingress– application container so that you can perform tests using its default configuration.
 
@@ -228,7 +228,7 @@ In order to SSH into the sidecar on a running instance, you'll need:
 - Cloud Run service/revision with VPC connectivity:
   - https://cloud.google.com/run/docs/configuring/connecting-vpc
 
-This setup works by creating [bastion host](https://en.wikipedia.org/wiki/Bastion_host) ( the `SSH Proxy Server` ) through which **Cloud Run instances** are accessible but not directly routable:
+This setup works by creating [bastion host](https://en.wikipedia.org/wiki/Bastion_host) ( the `SSH Proxy Server` ) through which **Cloud Run instances** are **individually accessible** but not directly routable:
 
 1. Upon startup, the `Cloud Run SSH server sidecar` creates a TLS tunnel via the `SSH Proxy Server` using the **`SSH Proxy Server` API**.
 
@@ -264,7 +264,7 @@ Since all networking happens within the VPC and tunnels are encrypted end to end
 > [!IMPORTANT]
 > While the `SSH Proxy Server` identity is known, the `Cloud Run SSH server sidecar` identity **must remain confidential** and only discovered via the **`SSH Proxy Server` API**.
 
-## SSH sidecar configuration
+## SSH server sidecar
 
 A pre-built Docker image is available as: `ghcr.io/gchux/cloud-run-ssh:latest`.
 

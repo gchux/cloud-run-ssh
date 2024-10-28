@@ -23,7 +23,7 @@ export MDS_ID_TOKEN_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}/${MDS_IDE
 function ping_ssh_proxy_server {
   ID_TOKEN="$(${MDS_ID_TOKEN_CURL} | tr -d '\n')"
   
-  curl -ivL -k -X"${1:-POST}" \
+  curl -vL -k -X"${1:-POST}" \
     -H "x-s8s-ssh-authorization: ${ID_TOKEN}" \
     -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" \
     -H "x-s8s-ssh-client-id: ${SSH_PROXY_CLIENT_ID}" \
