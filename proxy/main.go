@@ -40,6 +40,14 @@ type (
 )
 
 const (
+	PROJECT  APIPathParam = "project"
+	REGION   APIPathParam = "regions"
+	SERVICE  APIPathParam = "service"
+	REVISION APIPathParam = "revision"
+	INSTANCE APIPathParam = "instance"
+)
+
+const (
 	configContextKey = "ssh_proxy_server_config"
 
 	configFile     = "/etc/ssh_proxy_server/config.yaml"
@@ -59,19 +67,11 @@ const (
 	xServerlessSSHAuthorization = "x-s8s-ssh-authorization"
 	xServerlessSSHContentLength = "x-s8s-ssh-content-length"
 
-	projectAPI  = "/project/:project"
-	regionAPI   = "/region/:region"
-	serviceAPI  = "/service/:service"
-	revisionAPI = "/revision/:revision"
-	instanceAPI = "/instance/:instance"
-)
-
-const (
-	PROJECT  APIPathParam = "project"
-	REGION   APIPathParam = "regions"
-	SERVICE  APIPathParam = "service"
-	REVISION APIPathParam = "revision"
-	INSTANCE APIPathParam = "instance"
+	projectAPI  = "/project/:" + PROJECT
+	regionAPI   = "/region/:" + REGION
+	serviceAPI  = "/service/:" + SERVICE
+	revisionAPI = "/revision/:" + REVISION
+	instanceAPI = "/instance/:" + INSTANCE
 )
 
 var (

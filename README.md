@@ -399,4 +399,10 @@ from a local TCP port into a remote TCP port available in the **Cloud Run instan
 
 #### Sample `SSH Client` Execution
 
-![cloud_run_ssh_client](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_client.png?raw=true)
+- Simple SSH connection into a running **Cloud Run instance**:
+
+  ![cloud_run_ssh_client](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_client.png?raw=true)
+
+- SSH connection into a running **Cloud Run instance** with local port forwarding:
+
+  ![cloud_run_ssh_client_port_forward](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_client_2.png?raw=true)
