@@ -62,6 +62,10 @@ const (
 	xServerlessRevision   = "x-s8s-revision"
 	xServerlessInstanceID = "x-s8s-instance-id"
 
+	xServerlessSSHProxyID        = "x-s8s-ssh-proxy-id"
+	xServerlessSSHProxyHost      = "x-s8s-ssh-proxy-host"
+	xServerlessSSHProxyProjectID = "x-s8s-ssh-proxy-project-id"
+
 	xServerlessSSHClientID      = "x-s8s-ssh-client-id"
 	xServerlessSSHServerID      = "x-s8s-ssh-server-id"
 	xServerlessSSHAuthorization = "x-s8s-ssh-authorization"
@@ -104,9 +108,13 @@ func idTokenVerifier(config *cfg.ProxyConfig) gin.HandlerFunc {
 	allowedIdentities := accessControl.AllowedIdentities
 
 	return func(c *gin.Context) {
+		sshProxyProjectID := c.GetHeader(xServerlessSSHProxyProjectID)
+		sshProxyID := c.GetHeader(xServerlessSSHProxyID)
 		_sshProxyServerID := c.GetHeader(xServerlessSSHServerID)
 
-		if _sshProxyServerID != config.ID {
+		if sshProxyProjectID != config.ProjectID ||
+			sshProxyID != config.ID ||
+			_sshProxyServerID != config.ID {
 			c.AbortWithStatus(http.StatusForbidden)
 			return
 		}
@@ -140,7 +148,8 @@ func idTokenVerifier(config *cfg.ProxyConfig) gin.HandlerFunc {
 			return
 		}
 
-		if sshProxyServerName != payload.Audience {
+		sshProxyServerHost := c.GetHeader(xServerlessSSHProxyHost)
+		if sshProxyServerName != payload.Audience || sshProxyServerHost != payload.Audience {
 			fmt.Printf("idtoken[4]: rejected token audience '%s'\n", payload.Audience)
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return

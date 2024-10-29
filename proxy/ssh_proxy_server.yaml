@@ -10,17 +10,27 @@ services:
   - name: ssh-proxy-server-api-external
     addr: ":%SSH_PROXY_SERVER_API_PORT%"
     admission: ssh-proxy-allowed-hosts
+    hosts: well-known-hosts
     handler:
-      type: tcp
+      type: forward
       metadata:
         sniffing: true
+        postUp:
+          - "echo 'SSH Proxy Server API is available at: %SSH_PROXY_SERVER_ID%.ssh-proxy.internal:%SSH_PROXY_SERVER_API_PORT%"
     listener:
       type: tls
     forwarder:
       nodes:
         - name: ssh-registry-api-secure
-          addr: 127.0.0.1:8080
+          addr: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal:8080"
           protocol: http
+          http:
+            header:
+              x-s8s-ssh-proxy-project-id: "%PROJECT_ID%"
+              x-s8s-ssh-proxy-id: "%SSH_PROXY_SERVER_ID%"
+              x-s8s-ssh-proxy-host: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal"
+              x-s8s-ssh-proxy-api-port: "%SSH_PROXY_SERVER_API_PORT%"
+              x-s8s-ssh-proxy-tunnel-port: "%SSH_PROXY_SERVER_TUNNEL_PORT%"
   - name: ssh-proxy
     addr: ":%SSH_PROXY_SERVER_TUNNEL_PORT%"
     admission: ssh-proxy-allowed-hosts
@@ -29,8 +39,18 @@ services:
       metadata:
         tunnel.direct: true
         ingress: ssh-proxy-ingress-rules
+        postUp:
+          - "echo 'SSH Proxy Server TUNNEL is available at: %SSH_PROXY_SERVER_ID%.ssh-proxy.internal:%SSH_PROXY_SERVER_TUNNEL_PORT%"
     listener:
       type: tls
+
+hosts:
+  - name: well-known-hosts
+    mappings:
+      - ip: 127.0.0.1
+        hostname: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal"
+      - ip: 169.254.169.254
+        hostname: metadata.google.internal
 
 chains:
   - name: ssh-proxy-server-api-internal

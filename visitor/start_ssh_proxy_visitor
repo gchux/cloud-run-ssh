@@ -27,7 +27,7 @@ MDS_ID_TOKEN_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}/${MDS_IDENTITY_P
 ID_TOKEN="$(${MDS_ID_TOKEN_CURL} | tr -d '\n')"
 
 SSH_PROXY_SERVER_API_URL="https://${SSH_PROXY_SERVER_API_HOST_AND_PPORT}/instance/${INSTANCE_ID}"
-SERVERLESS_INSTANCE=`curl -sk -H "x-s8s-ssh-authorization: ${ID_TOKEN}" -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" "${SSH_PROXY_SERVER_API_URL}" | ${JQ_CMD} 'del(.instance,.ping)' | tr -d '\n'`
+SERVERLESS_INSTANCE=`curl -sk -H "Host: ${SSH_PROXY_SERVER_NAME}" -H "x-s8s-ssh-authorization: ${ID_TOKEN}" -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" "${SSH_PROXY_SERVER_API_URL}" | ${JQ_CMD} 'del(.instance,.ping)' | tr -d '\n'`
 
 echo "${SERVERLESS_INSTANCE}" | /yq -pj -os -rM 'del(.tunnel)'
 
