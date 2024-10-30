@@ -65,11 +65,11 @@ const (
 	xServerlessSSHProxyID        = "x-s8s-ssh-proxy-id"
 	xServerlessSSHProxyHost      = "x-s8s-ssh-proxy-host"
 	xServerlessSSHProxyProjectID = "x-s8s-ssh-proxy-project-id"
-
-	xServerlessSSHClientID      = "x-s8s-ssh-client-id"
-	xServerlessSSHServerID      = "x-s8s-ssh-server-id"
-	xServerlessSSHAuthorization = "x-s8s-ssh-authorization"
-	xServerlessSSHContentLength = "x-s8s-ssh-content-length"
+	xServerlessSSHClientID       = "x-s8s-ssh-client-id"
+	xServerlessSSHServerID       = "x-s8s-ssh-server-id"
+	xServerlessSSHVisitorID      = "x-s8s-ssh-visitor-id"
+	xServerlessSSHAuthorization  = "x-s8s-ssh-authorization"
+	xServerlessSSHContentLength  = "x-s8s-ssh-content-length"
 
 	projectAPI  = "/project/:" + PROJECT
 	regionAPI   = "/region/:" + REGION
@@ -444,6 +444,9 @@ func getInstanceByID(c *gin.Context) {
 				cfg.Project, cfg.Region, cfg.Service, cfg.Revision, cfg.ID, cfg.Tunnel)
 			fmt.Fprintln(c.Writer, err.Error())
 		}
+
+		fmt.Fprintln(c.Writer, *cfg.ID, *cfg.Tunnel, c.GetHeader(xServerlessSSHVisitorID))
+
 		return
 	}
 
@@ -668,7 +671,6 @@ func main() {
 	gin.DisableConsoleColor()
 
 	// API endpoints that should be available internally
-
 	internalAPI := gin.Default()
 	internalAPI.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 	internalAPI.GET("/ingress-rules", getIngessRules)
@@ -695,7 +697,6 @@ func main() {
 	go internalAPI.RunUnix(internalAPIUDS)
 
 	// API endpoints that should be available externally
-
 	externalAPI := gin.Default()
 	externalAPI.SetTrustedProxies(config.AccessControl.AllowedHosts.ToSlice())
 	externalAPI.Use(idTokenVerifier(config))

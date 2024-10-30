@@ -24,51 +24,44 @@ echo -e '\n' >> /cloud_run_ssh_banner
 
 SSH_PROXY_SERVER_ENABLED=${ENABLE_SSH_PROXY:-false}
 if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
-  echo "export MDS_URL=${MDS_URL}" > /ssh_proxy_client.env
 
-  echo "K_SERVICE=${K_SERVICE}" >> /ssh_proxy_client.env
-  echo "K_REVISION=${K_REVISION}" >> /ssh_proxy_client.env
-  echo "INSTANCE_ID=${INSTANCE_ID}" >> /ssh_proxy_client.env
+  echo "export PROJECT_ID=${PROJECT_ID}" > /ssh_proxy_client.env
+  echo "export GCP_REGION=${GCP_REGION}" > /ssh_proxy_client.env
+  echo "export K_SERVICE=${K_SERVICE}" >> /ssh_proxy_client.env
+  echo "export K_REVISION=${K_REVISION}" >> /ssh_proxy_client.env
+  echo "export INSTANCE_ID=${INSTANCE_ID}" >> /ssh_proxy_client.env
 
-  SSH_PROXY_SERVER_ID="${SSH_PROXY_SERVER_ID:-'00000000-0000-0000-0000-000000000000'}"
-  echo "export SSH_PROXY_SERVER_ID=${SSH_PROXY_SERVER_ID}" >> /ssh_proxy_client.env
+  echo "export SSH_PROXY_CLIENT_ID=${INSTANCE_UUID}" >> /ssh_proxy_client.env
+
+  echo "export SSH_PROXY_SERVER_ID=${SSH_PROXY_SERVER_ID:-00000000-0000-0000-0000-000000000000}" >> /ssh_proxy_client.env
 
   echo "export SSH_PROXY_SERVER_HOST=${SSH_PROXY_SERVER_HOST}" >> /ssh_proxy_client.env
   echo "export SSH_PROXY_SERVER_API_PORT=${SSH_PROXY_SERVER_API_PORT:-5000}" >> /ssh_proxy_client.env
   echo "export SSH_PROXY_SERVER_TUNNEL_PORT=${SSH_PROXY_SERVER_TUNNEL_PORT:-5555}" >> /ssh_proxy_client.env
 
-  echo "export SSH_PROXY_CLIENT_ID=${INSTANCE_UUID}" >> /ssh_proxy_client.env
-
-  SSH_PROXY_SERVER_URL="https://${SSH_PROXY_SERVER_HOST}:${SSH_PROXY_SERVER_API_PORT}"
-  echo "export SSH_PROXY_SERVER_URL=${SSH_PROXY_SERVER_URL}" >> /ssh_proxy_client.env
- 
-  SSH_PROXY_SERVER_INSTANCE_PATH="project/${PROJECT_ID}/region/${GCP_REGION}/service/${K_SERVICE}/revision/${K_REVISION}/instance/${INSTANCE_ID}"
-  echo "export SSH_PROXY_SERVER_INSTANCE_PATH=${SSH_PROXY_SERVER_INSTANCE_PATH}" >> /ssh_proxy_client.env
-
-  SSH_PROXY_SERVER_INSTANCE_URL="${SSH_PROXY_SERVER_URL}/${SSH_PROXY_SERVER_INSTANCE_PATH}"
-  echo "export SSH_PROXY_SERVER_INSTANCE_URL=${SSH_PROXY_SERVER_INSTANCE_URL}" >> /ssh_proxy_client.env
-
-  # register INGRESS with the SSH Proxy Server
-  # renew INGRESS every x amount of seconds
-  /poll_ssh_proxy_server ${SSH_PROXY_PING_INTERVAL:-60} POST &
-  export SSH_PROXY_SERVER_POLL_PID=$!
-
   sed -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID}|g" \
     -e "s|%SSH_PROXY_CLIENT_ID%|${INSTANCE_UUID}|g" \
     -e "s|%SSH_PROXY_SERVER_HOST%|${SSH_PROXY_SERVER_HOST}|g" \
-    -e "s|%SSH_PROXY_SERVER_PORT%|${SSH_PROXY_SERVER_TUNNEL_PORT}|g" \
+    -e "s|%SSH_PROXY_SERVER_API_PORT%|${SSH_PROXY_SERVER_API_PORT:-5000}|g" \
+    -e "s|%SSH_PROXY_SERVER_TUNNEL_PORT%|${SSH_PROXY_SERVER_TUNNEL_PORT:-5555}|g" \
+    -e "s|%PROJECT_ID%|${PROJECT_ID}|g" \
     -e "s|%PROJECT_NUM%|${PROJECT_NUM}|g" \
     -e "s|%GCP_REGION%|${GCP_REGION}|g" \
     -e "s|%K_SERVICE%|${K_SERVICE}|g" \
     -e "s|%K_REVISION%|${K_REVISION}|g" \
     -e "s|%INSTANCE_ID%|${INSTANCE_ID}|g" \
-    -e "s|%APP_HTTP_PORT%|${APP_HTTP_PORT:8080}|g" \
+    -e "s|%APP_HTTP_PORT%|${APP_HTTP_PORT:-8080}|g" \
     -e "s|%SSH_HTTP_PORT%|${SSH_HTTP_PORT}|g" \
     /ssh_proxy_client.yaml > /tmp/ssh_proxy_client.yaml
 
   # start tunnel with SSH Proxy Server
   /gost -D -C /tmp/ssh_proxy_client.yaml 2>&1 &
   export SSH_PROXY_CLIENT_PID=$!
+
+  # register INGRESS with the SSH Proxy Server
+  # renew INGRESS every x amount of seconds
+  /poll_ssh_proxy_server ${SSH_PROXY_PING_INTERVAL:-60} POST &
+  export SSH_PROXY_SERVER_POLL_PID=$!
 fi
 
 SSH_SERVER_STATIC_PARAMS="hostname=localhost&port=2222&term=xterm-256color"

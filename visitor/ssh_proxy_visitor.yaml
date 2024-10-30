@@ -30,5 +30,5 @@ chains:
 
 tls:
   validity: 8760h
-  commonName: "%INSTANCE_ID%.ssh.internal"
+  commonName: "%SSH_PROXY_VISITOR_ID%.ssh.internal"
   organization: "%PROJECT_ID%"

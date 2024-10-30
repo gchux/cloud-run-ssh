@@ -1,0 +1,62 @@
+services:
+  - name: dns-proxy
+    addr: "127.0.0.1:5353"
+    hosts: well-known-hosts
+    handler:
+      type: dns
+    listener:
+      type: dns
+      metadata:
+        mode: udp
+    forwarder:
+      nodes:
+        - name: metadata-server-dns
+          addr: 169.254.169.254
+  - name: ssh-proxy-server-api
+    addr: "127.0.0.1:%SSH_PROXY_SERVER_API_PORT%"
+    hosts: well-known-hosts
+    handler:
+      type: tcp
+    listener:
+      type: tcp
+    forwarder:
+      nodes:
+        - name: ssh-proxy-server-api
+          addr: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal:%SSH_PROXY_SERVER_API_PORT%"
+  - name: https-metadata-server
+    addr: "127.0.0.1:8254"
+    hosts: well-known-hosts
+    handler:
+      type: forward
+      metadata:
+        sniffing: true
+    listener:
+      type: tls
+    forwarder:
+      nodes:
+        - name: metadata-server
+          addr: "metadata.google.internal:80"
+          http:
+            host: metadata.google.internal
+            header:
+              Metadata-Flavor: Google
+            rewrite:
+              - match: /id-token
+                replacement: /computeMetadata/v1/instance/service-accounts/default/identity
+
+hosts:
+  - name: well-known-hosts
+    mappings:
+      - ip: 127.0.0.1
+        hostname: "%SSH_PROXY_VISITOR_ID%.ssh.internal"
+      - ip: "%SSH_PROXY_SERVER_HOST%"
+        hostname: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal"
+      - ip: "%SSH_PROXY_SERVER_HOST%"
+        hostname: "%SSH_PROXY_SERVER_ID%.ssh.internal"
+      - ip: 169.254.169.254
+        hostname: metadata.google.internal
+
+tls:
+  validity: 8760h
+  commonName: "%SSH_PROXY_VISITOR_ID%.ssh.internal"
+  organization: "%PROJECT_ID%"

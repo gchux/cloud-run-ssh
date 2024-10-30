@@ -1,18 +1,39 @@
 services:
-  - name: https-proxy
-    addr: 127.0.0.1:8443
+  - name: dns-proxy
+    addr: "127.0.0.1:5353"
+    hosts: well-known-hosts
+    handler:
+      type: dns
+    listener:
+      type: dns
+      metadata:
+        mode: udp
+    forwarder:
+      nodes:
+        - name: metadata-server-dns
+          addr: 169.254.169.254
+        - name: 8888-dns
+          addr: 8.8.8.8
+        - name: 8844-dns
+          addr: 8.8.4.4
+  - name: tls-web-ssh
+    addr: "127.0.0.1:8443"
+    hosts: well-known-hosts
     handler:
       type: forward
+      metadata:
+        sniffing: true
     listener:
       type: tls
     forwarder:
       nodes:
         - name: web-ssh
-          addr: "127.0.0.1:%SSH_HTTP_PORT%"
+          addr: "%SSH_PROXY_CLIENT_ID%.ssh.internal:%SSH_HTTP_PORT%"
           http:
             host: "127.0.0.1:%SSH_HTTP_PORT%"
-  - name: proxy-server
-    addr: 127.0.0.1:1111
+  - name: "ssh-%INSTANCE_ID%"
+    addr: "127.0.0.1:1111"
+    hosts: well-known-hosts
     handler:
       type: tcp
       metadata:
@@ -21,16 +42,48 @@ services:
       type: tcp
     forwarder:
       nodes:
-        - name: https-proxy-fwd
-          addr: 127.0.0.1:8443
+        - name: tls-web-ssh-fwd
+          addr: "%SSH_PROXY_CLIENT_ID%.ssh.internal:8443"
           filter:
             protocol: tls
-        - name: ssh-server
-          addr: 127.0.0.1:2222
+        - name: local-ssh-server
+          addr: "%SSH_PROXY_CLIENT_ID%.ssh.internal:2222"
           filter:
             protocol: ssh
-  - name: ssh-"%INSTANCE_ID%"
+  - name: ssh-proxy-server-api
+    addr: "127.0.0.1:%SSH_PROXY_SERVER_API_PORT%"
+    hosts: well-known-hosts
+    handler:
+      type: tcp
+    listener:
+      type: tcp
+    forwarder:
+      nodes:
+        - name: ssh-proxy-server-api
+          addr: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal:%SSH_PROXY_SERVER_API_PORT%"
+  - name: https-metadata-server
+    addr: "127.0.0.1:8254"
+    hosts: well-known-hosts
+    handler:
+      type: tcp
+      metadata:
+        sniffing: true
+    listener:
+      type: tls
+    forwarder:
+      nodes:
+        - name: metadata-server-id-token
+          addr: "metadata.google.internal:80"
+          http:
+            host: metadata.google.internal
+            header:
+              Metadata-Flavor: Google
+            rewrite:
+              - match: /id-token
+                replacement: /computeMetadata/v1/instance/service-accounts/default/identity
+  - name: "%INSTANCE_ID%"
     addr: :0
+    hosts: well-known-hosts
     handler:
       type: tcp
     listener:
@@ -39,7 +92,21 @@ services:
     forwarder:
       nodes:
         - name: proxy-server-fwd
-          addr: 127.0.0.1:1111
+          addr: "%SSH_PROXY_CLIENT_ID%.ssh.internal:1111"
+
+hosts:
+  - name: well-known-hosts
+    mappings:
+      - ip: 127.0.0.1
+        hostname: "%SSH_PROXY_CLIENT_ID%.ssh.internal"
+      - ip: "%SSH_PROXY_SERVER_HOST%"
+        hostname: "%SSH_PROXY_SERVER_ID%.ssh-proxy.internal"
+      - ip: "%SSH_PROXY_SERVER_HOST%"
+        hostname: "%SSH_PROXY_SERVER_ID%.ssh.internal"
+      - ip: 169.254.169.254
+        hostname: metadata.google.internal
+      - ip: 127.0.0.1
+        hostname: "%K_SERVICE%-%PROJECT_NUM%.%GCP_REGION%.run.app"
 
 chains:
   - name: ssh-proxy
@@ -47,7 +114,7 @@ chains:
       - name: ssh-proxy
         nodes:
           - name: ssh-proxy-server
-            addr: "%SSH_PROXY_SERVER_HOST%:%SSH_PROXY_SERVER_PORT%"
+            addr: "%SSH_PROXY_SERVER_HOST%:%SSH_PROXY_SERVER_TUNNEL_PORT%"
             connector:
               type: tunnel
               metadata:
@@ -62,4 +129,4 @@ chains:
 tls:
   validity: 8760h
   commonName: "%K_REVISION%.%K_SERVICE%.%PROJECT_NUM%.%GCP_REGION%.run.app"
-  organization: "%INSTANCE_ID%"
+  organization: "%PROJECT_ID%-%INSTANCE_ID%"

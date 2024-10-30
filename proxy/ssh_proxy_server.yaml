@@ -15,8 +15,6 @@ services:
       type: forward
       metadata:
         sniffing: true
-        postUp:
-          - "echo 'SSH Proxy Server API is available at: %SSH_PROXY_SERVER_ID%.ssh-proxy.internal:%SSH_PROXY_SERVER_API_PORT%'"
     listener:
       type: tls
     forwarder:
@@ -39,8 +37,6 @@ services:
       metadata:
         tunnel.direct: true
         ingress: ssh-proxy-ingress-rules
-        postUp:
-          - "echo 'SSH Proxy Server TUNNEL is available at: %SSH_PROXY_SERVER_ID%.ssh-proxy.internal:%SSH_PROXY_SERVER_TUNNEL_PORT%'"
     listener:
       type: tls
 

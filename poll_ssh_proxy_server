@@ -7,28 +7,34 @@ source /ssh_proxy_client.env
 
 export EXPECTED_SSH_PROXY_SERVER_NAME="${SSH_PROXY_SERVER_ID}.ssh-proxy.internal"
 
-# make sure that INGRESS is created agains the correct SSH Proxy Server: get the subject from the SSH Proxy Server self-signed certificate.
-export SSH_PROXY_SERVER_HOST_AND_PPORT="${SSH_PROXY_SERVER_HOST}:${SSH_PROXY_SERVER_API_PORT}"
-export SSH_PROXY_SERVER_NAME=`openssl s_client -connect "${SSH_PROXY_SERVER_HOST_AND_PPORT}" 2>&1 </dev/null | grep 'subject=' | tr -d ' ' | tr ',' '\n' | grep -Ei '^CN=.*' | awk -F'=' '{print $2}' | tr -d '\n'`
+# make sure that INGRESS is created against the correct SSH Proxy Server: get the subject from the SSH Proxy Server self-signed certificate.
+export SSH_PROXY_SERVER_NAME=`openssl s_client \
+  -connect "${SSH_PROXY_SERVER_HOST}:${SSH_PROXY_SERVER_API_PORT:-5000}" 2>&1 </dev/null \
+  | grep 'subject=' | tr -d ' ' | tr ',' '\n' | grep -Ei '^CN=.*' | awk -F'=' '{print $2}' | tr -d '\n'`
 
 if [[ "${SSH_PROXY_SERVER_NAME}" != "${EXPECTED_SSH_PROXY_SERVER_NAME}" ]]; then
   echo "SSH Proxy Server identity could not be verified: ${EXPECTED_SSH_PROXY_SERVER_NAME} - ${SSH_PROXY_SERVER_NAME}"
   exit 0
 fi
 
-export MDS_IDENTITY_PATH='instance/service-accounts/default/identity'
-export MDS_ID_TOKEN_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}/${MDS_IDENTITY_PATH}?audience=${SSH_PROXY_SERVER_NAME}&format=full"
+sleep 3
 
+# obtain ID tokens over HTTPS
+HTTPS_MDS_URL="https://127.0.0.1:8254"
+export MDS_ID_TOKEN_CURL="curl -sk ${HTTPS_MDS_URL}/id-token?audience=${SSH_PROXY_SERVER_NAME}&format=full"
+
+export SSH_PROXY_SERVER_API_INSTANCE_PATH="project/${PROJECT_ID}/region/${GCP_REGION}/service/${K_SERVICE}/revision/${K_REVISION}/instance/${INSTANCE_ID}"
+export SSH_PROXY_SERVER_API_INSTANCE_URL="https://127.0.0.1:${SSH_PROXY_SERVER_API_PORT:-5000}/${SSH_PROXY_SERVER_API_INSTANCE_PATH}"
 
 function ping_ssh_proxy_server {
   ID_TOKEN="$(${MDS_ID_TOKEN_CURL} | tr -d '\n')"
   
-  curl -vL -k -X"${1:-POST}" \
-    -H "Host: ${SSH_PROXY_SERVER_NAME}" \
+  curl -v -k -X"${1:-POST}" \
+    -H "Host: ${SSH_PROXY_SERVER_NAME}:${SSH_PROXY_SERVER_API_PORT:-5000}" \
     -H "x-s8s-ssh-authorization: ${ID_TOKEN}" \
     -H "x-s8s-ssh-server-id: ${SSH_PROXY_SERVER_ID}" \
     -H "x-s8s-ssh-client-id: ${SSH_PROXY_CLIENT_ID}" \
-    "${SSH_PROXY_SERVER_INSTANCE_URL}"
+    "${SSH_PROXY_SERVER_API_INSTANCE_URL}"
 }
 
 function poll_ssh_proxy_server {
