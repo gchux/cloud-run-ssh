@@ -14,10 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM --platform=linux/amd64 linuxserver/openssh-server
+ARG SSH_SERVER_VERSION=amd64-9.7_p1-r4-ls174
+
+FROM --platform=linux/amd64 lscr.io/linuxserver/openssh-server:${SSH_SERVER_VERSION}
 # base image: https://github.com/linuxserver/docker-openssh-server
 
-ARG GOST_VERSION=3.0.0-nightly.20241022
+ARG SSH_SERVER_VERSION=amd64-9.7_p1-r4-ls174
 
 ARG WEB_PORT="8022"
 ARG SSH_USER="root"
@@ -29,7 +31,9 @@ ARG CLOUDSDK_VERSION
 ARG CSQL_PROXY_VERSION
 ARG ALLOYDB_PROXY_VERSION
 ARG USQL_VERSION
-ARG GCSFUSE_VERSION=2.1.0
+
+ARG GCSFUSE_VERSION=2.5.1
+ARG GOST_VERSION=3.0.0-nightly.20241122
 
 ENV USER_NAME=${SSH_USER}
 ENV USER_PASSWORD=${SSH_PASS}
@@ -50,34 +54,44 @@ COPY ./ssh_proxy_client.yaml /ssh_proxy_client.yaml
 COPY ./poll_ssh_proxy_server /poll_ssh_proxy_server
 COPY ./cloud_run_ssh_banner /cloud_run_ssh_banner
 
-RUN apk update && apk add dpkg fuse vim busybox-extras net-tools bind-tools iproute2 \
+RUN apk update && apk add --quiet --no-progress \
+    dpkg fuse vim busybox-extras net-tools bind-tools iproute2 \
     openssl curl tmux git bc traceroute tcptraceroute tcpdump mtr nmap redis \
     python3-dev py3-pip gcc libc-dev libffi-dev
 
-RUN wget -P /usr/bin http://www.vdberg.org/~richard/tcpping && chmod a+rx /usr/bin/tcpping \
-    && python -m pip install --break-system-packages httpie webssh \
-    && curl -o /gcsfuse.deb -L https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v${GCSFUSE_VERSION}/gcsfuse_${GCSFUSE_VERSION}_amd64.deb \
-    && dpkg -i --force-all /gcsfuse.deb && rm -vf /gcsfuse.deb \
-    && curl -sL -o yq https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 && chmod +x /yq \
-    && curl -sL -o gost.tar.gz https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_linux_amd64.tar.gz \
-    && tar -xzvf gost.tar.gz && chmod +x gost && rm -vf gost.tar.gz
+RUN wget -nv -q -P /usr/bin \
+    http://www.vdberg.org/~richard/tcpping && chmod a+rx /usr/bin/tcpping \
+    && pip config --user set global.progress_bar off \
+    && python -m pip install --break-system-packages httpie webssh
+RUN curl -o /gcsfuse.deb -L \
+    https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v${GCSFUSE_VERSION}/gcsfuse_${GCSFUSE_VERSION}_amd64.deb \
+    && dpkg -i --force-all /gcsfuse.deb && rm -vf /gcsfuse.deb
+RUN curl -sL -o yq https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 && chmod +x /yq
+RUN curl -sL -o gost.tar.gz \
+    https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_linux_amd64.tar.gz \
+    && tar -xzf gost.tar.gz && chmod +x gost && rm -vf gost.tar.gz
 
-RUN wget -P / https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${CLOUDSDK_VERSION}-linux-x86_64.tar.gz \
-    && tar -xzvf /google-cloud-cli-${CLOUDSDK_VERSION}-linux-x86_64.tar.gz -C / \
+RUN wget -nv -q -P / \
+    https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${CLOUDSDK_VERSION}-linux-x86_64.tar.gz \
+    && tar -xzf /google-cloud-cli-${CLOUDSDK_VERSION}-linux-x86_64.tar.gz -C / \
     && rm -vf /google-cloud-cli-${CLOUDSDK_VERSION}-linux-x86_64.tar.gz \
-    && /google-cloud-sdk/bin/gcloud components install cbt --quiet \
+    && /google-cloud-sdk/bin/gcloud components install cbt alpha beta --quiet \
+    && /google-cloud-sdk/bin/gcloud components update --quiet \
     && ln -s /google-cloud-sdk/bin/* /usr/bin/ \
     && echo "export PATH=$PATH:/google-cloud-sdk/bin" >> ~/.bashrc \
     && PATH="$PATH:/google-cloud-sdk/bin"
 
-RUN curl -o /cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v${CSQL_PROXY_VERSION}/cloud-sql-proxy.linux.amd64 \
+RUN curl -sL -o /cloud-sql-proxy \
+    https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v${CSQL_PROXY_VERSION}/cloud-sql-proxy.linux.amd64 \
     && chmod a+x /cloud-sql-proxy && ln -s /cloud-sql-proxy /usr/bin/cloud-sql-proxy
 
-RUN wget https://storage.googleapis.com/alloydb-auth-proxy/v${ALLOYDB_PROXY_VERSION}/alloydb-auth-proxy.linux.amd64 -O /alloydb-auth-proxy \
+RUN wget -nv -q \
+    https://storage.googleapis.com/alloydb-auth-proxy/v${ALLOYDB_PROXY_VERSION}/alloydb-auth-proxy.linux.amd64 -O /alloydb-auth-proxy \
     && chmod a+x /alloydb-auth-proxy && ln -s /alloydb-auth-proxy /usr/bin/alloydb-auth-proxy
 
-RUN wget -P / https://github.com/xo/usql/releases/download/v${USQL_VERSION}/usql_static-${USQL_VERSION}-linux-amd64.tar.bz2 \
-    && tar -xvf /usql_static-${USQL_VERSION}-linux-amd64.tar.bz2 \
+RUN wget -nv -q -P / \
+    https://github.com/xo/usql/releases/download/v${USQL_VERSION}/usql_static-${USQL_VERSION}-linux-amd64.tar.bz2 \
+    && tar -xf /usql_static-${USQL_VERSION}-linux-amd64.tar.bz2 \
     && rm -vf /usql_static-${USQL_VERSION}-linux-amd64.tar.bz2 \
     && ln -s /usql_static /usr/bin/usql
 
