@@ -66,16 +66,19 @@ fi
 
 SSH_SERVER_STATIC_PARAMS="hostname=localhost&port=2222&term=xterm-256color"
 
+# add `password` query paramenter to allow going straight to SHELL
+USER_PASSWORD_B64=`printf "${USER_PASSWORD}" | basenc --base64url | tr -d '\n'`
+
 export SSH_SERVER_URL="https://${CLOUD_RUN_FQDN}"
 SSH_SERVER_TITLE="${PROJECT_ID}_${GCP_REGION}_${K_SERVICE}_${K_REVISION}"
-SSH_SERVER_PARAMS="${SSH_SERVER_STATIC_PARAMS}&username=${USER_NAME}&title=${SSH_SERVER_TITLE}"
+SSH_SERVER_PARAMS="${SSH_SERVER_STATIC_PARAMS}&username=${USER_NAME}&title=${SSH_SERVER_TITLE}&password=${USER_PASSWORD_B64}"
 
-echo "credentials: ${USER_NAME}/${USER_PASSWORD}"
+echo "[SSH Server] - credentials: [user:${USER_NAME}][pass:${USER_PASSWORD}]"
+echo "[SSH Server] - Cloud Run URL: ${SSH_SERVER_URL}?${SSH_SERVER_PARAMS}"
+echo "[SSH Server] - Cloud Run `gcloud` proxy command: gcloud run services proxy ${K_SERVICE} --region=${GCP_REGION} --port=${SSH_HTTP_PORT}"
+echo "[SSH Server] - Cloud Run proxied URL: http://localhost:${SSH_HTTP_PORT}?${SSH_SERVER_PARAMS}"
 
-echo "SSH Server URL: ${SSH_SERVER_URL}?${SSH_SERVER_PARAMS}"
-echo "SSH Server proxy command: gcloud run services proxy ${K_SERVICE} --region=${GCP_REGION} --port=${SSH_HTTP_PORT}"
-echo "SSH Server proxied URL: http://localhost:${SSH_HTTP_PORT}?${SSH_SERVER_PARAMS}"
-echo "SSH Server project/region/service/revision/instnace/tunnel: ${PROJECT_ID} / ${GCP_REGION} / ${K_SERVICE} / ${K_REVISION} / ${INSTANCE_ID} / ${INSTANCE_UUID}"
+echo "[SSH Server] - project/region/service/revision/instnace/tunnel: ${PROJECT_ID} / ${GCP_REGION} / ${K_SERVICE} / ${K_REVISION} / ${INSTANCE_ID} / ${INSTANCE_UUID}"
 
 ssh-keyscan -p 2222 127.0.0.1 2>/dev/null
 

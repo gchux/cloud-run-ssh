@@ -176,6 +176,10 @@ gcloud run deploy ${SERVICE_NAME} \
 
 4. Click `Connect`
 
+> [!TIP]
+> The `gcloud` proxy command and ALL relevant URLs will be avaiable in Cloud Logging; filter logs using `[SSH Server]` to find them.
+> Use any of the logged URLs to log into the **`SSH Server`** automatically and go straight to the shell.
+
 ## Advanced Configurations
 
 - Use `SUDO_ACCESS=true` if you want to allow users to escalate privileges without allowing `root` to login.
@@ -228,7 +232,7 @@ In order to SSH into the sidecar in any **Cloud Run running instance**, you'll n
 - Cloud Run service/revision with VPC connectivity:
   - https://cloud.google.com/run/docs/configuring/connecting-vpc
 
-This setup works by creating [bastion host](https://en.wikipedia.org/wiki/Bastion_host) ( the `SSH Proxy Server` ) through which **Cloud Run instances** are **individually accessible** but not directly reachable as the `SSH Proxy Server` cannot route traffic to any of them unless the  **Cloud Run instances** establish a connection first; this connections is called a tunnel.
+This setup works by creating [bastion host](https://en.wikipedia.org/wiki/Bastion_host) ( the `SSH Proxy Server` ) through which **Cloud Run instances** are **individually accessible** but not directly reachable as the `SSH Proxy Server` cannot route traffic to any of them unless the **Cloud Run instances** establish a connection first; this connections is called a tunnel.
 
 The flow to create and use an encrypted tunnel to connect to a **Cloud Run instance** is decribed as follows:
 
@@ -251,7 +255,7 @@ The flow to create and use an encrypted tunnel to connect to a **Cloud Run insta
    - The **`SSH Proxy Server` API & Tunnel** ports can be adjusted; the default values are: `5000` for the API, and `5555` for the Tunnel.
 
 4. The [`SSH Client`](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/ssh) ( aka the **SSH Proxy Visitor** ) uses the **`SSH Proxy Server` API** to resolve a **Cloud Run instance** ID into the correct TLS tunnel to be used.
-  
+
 5. The [`SSH Client`](https://github.com/gchux/cloud-run-ssh/blob/main/visitor/ssh) uses the discovered TLS tunnel to connect to a running **Cloud Run instance**'s `SSH server sidecar` via the `SSH Proxy Server`.
 
    - The `SSH Proxy Server` must also allow access to the host(s) `IPv4`/`IPv6` or `CIDR` ranges where the `SSH Clients` will be connecting from.
