@@ -53,6 +53,7 @@ COPY ./keys/*.pub /pubkeys/
 COPY ./ssh_proxy_client.yaml /ssh_proxy_client.yaml
 COPY ./poll_ssh_proxy_server /poll_ssh_proxy_server
 COPY ./cloud_run_ssh_banner /cloud_run_ssh_banner
+COPY ./webssh /webssh
 
 RUN apk update && apk add --quiet --no-progress \
     dpkg fuse vim busybox-extras net-tools bind-tools iproute2 \
@@ -61,7 +62,7 @@ RUN apk update && apk add --quiet --no-progress \
 
 RUN wget -nv -q -P /usr/bin 'http://www.vdberg.org/~richard/tcpping' && chmod a+rx /usr/bin/tcpping
 RUN python -m pip config --user set global.progress_bar off \
-    && python -m pip install --break-system-packages --no-cache-dir httpie webssh
+    && python -m pip install --break-system-packages --no-cache-dir httpie /webssh
 RUN curl -o /gcsfuse.deb -L \
     https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v${GCSFUSE_VERSION}/gcsfuse_${GCSFUSE_VERSION}_amd64.deb \
     && dpkg -i --force-all /gcsfuse.deb && rm -vf /gcsfuse.deb

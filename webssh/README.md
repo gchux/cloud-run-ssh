@@ -4,7 +4,6 @@ Forked from: https://github.com/huashengdun/webssh
 
 ## WebSSH
 
-[![python](https://github.com/huashengdun/webssh/actions/workflows/python.yml/badge.svg)](https://github.com/huashengdun/webssh/actions/workflows/python.yml)
 [![codecov](https://raw.githubusercontent.com/huashengdun/webssh/coverage-badge/coverage.svg)](https://raw.githubusercontent.com/huashengdun/webssh/coverage-badge/coverage.svg)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/webssh.svg)
 ![PyPI](https://img.shields.io/pypi/v/webssh.svg)
