@@ -131,14 +131,17 @@ jQuery(function ($) {
     var i, pair, key, val,
       arr = string.split('&');
 
-    // set values from SSH Server by default
-    const ssh_server = window.ssh_server || {};
-    form_map['hostname'] = ssh_server.host;
-    form_map['port'] = ssh_server.port;
-    form_map['username'] = ssh_server.user;
-    form_map['password'] = ssh_server.pass;
+    const ssh_server = window.ssh_server;
 
-    // continue with URL query params to allow client override
+    // set values from SSH Server if `SSH_AUTO_LOGIN` is enabled.
+    if (ssh_server.auto_login) {
+      form_map['hostname'] = ssh_server.host;
+      form_map['port'] = ssh_server.port;
+      form_map['username'] = ssh_server.user;
+      form_map['password'] = ssh_server.pass;
+    }
+
+    // continue with URL query params to allow client overrides.
     for (i = 0; i < arr.length; i++) {
       pair = arr[i].split('=');
       key = pair[0].trim().toLowerCase();
@@ -151,8 +154,8 @@ jQuery(function ($) {
       }
     }
 
-    // if SSH Server provides a password, then skip B64 decode
-    if (!ssh_server.pass && form_map.password) {
+    // if SSH Server provides a password, then skip B64 decode.
+    if (!ssh_server.auto_login && form_map.password) {
       form_map.password = decode_password(form_map.password);
     }
   }
