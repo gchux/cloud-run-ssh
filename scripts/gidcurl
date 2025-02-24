@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+ARGUMENTS="${@:1:$#-1}"
+AUDIENCE="${@: -1}"
+
+echo "* ARGUMENTS: ${ARGUMENTS}"
+echo "* AUDIENCE: ${AUDIENCE}"
+
+ID_TOKEN=`curl -sS -L -H 'Metadata-Flavor:Google' \
+  "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=${AUDIENCE}" \
+  | tr -d '\n'`
+
+if [[ -z "${ARGUMENTS}" ]]; then
+  curl -H "Authorization: Bearer ${ID_TOKEN}" "${AUDIENCE}"
+else
+  curl -H "Authorization: Bearer ${ID_TOKEN}" "${ARGUMENTS}" "${AUDIENCE}"
+fi

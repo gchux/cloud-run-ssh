@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+ACCESS_TOKEN=`curl -sS -L -H 'Metadata-Flavor:Google' \
+  'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token?alt=json' \
+  | jq -cMr '.access_token' | tr -d '\n'`
+
+echo "${ACCESS_TOKEN}"
+
+curl -H "Authorization: Bearer ${ACCESS_TOKEN}" "${@:1}"

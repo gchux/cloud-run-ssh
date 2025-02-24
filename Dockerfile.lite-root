@@ -49,6 +49,8 @@ COPY ./ssh_proxy_client.yaml /ssh_proxy_client.yaml
 COPY ./poll_ssh_proxy_server /poll_ssh_proxy_server
 COPY ./cloud_run_ssh_banner /cloud_run_ssh_banner
 COPY ./webssh /webssh
+COPY ./scripts/gcurl /usr/local/bin/gcurl
+COPY ./scripts/gidcurl /usr/local/bin/gidcurl
 
 RUN apk update && apk add --quiet --no-progress \
     dpkg fuse vim busybox-extras net-tools bind-tools iproute2 \
