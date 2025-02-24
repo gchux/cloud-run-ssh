@@ -195,7 +195,14 @@ class PrivateKey(object):
 
 class MixinHandler(object):
 
-    custom_headers = {"Server": "TornadoServer"}
+    custom_headers = {
+        "Server": "Cloud Run SSH server",
+        "x-projet-id": ENV_PROJECT_ID,
+        "x-gcp-region": ENV_GCP_REGION,
+        "x-s8s-run-svc": ENV_K_SERVICE,
+        "x-s8s-run-rev": ENV_K_REVISION,
+        "x-s8s-run-instance": ENV_INSTANCE_ID,
+    }
 
     html = (
         "<html><head><title>{code} {reason}</title></head><body>{code} "

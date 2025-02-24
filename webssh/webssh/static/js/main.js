@@ -45,7 +45,7 @@ jQuery(function ($) {
     default_title = 'WebSSH',
     title_element = document.querySelector('title'),
     form_id = '#connect',
-    debug = document.querySelector(form_id).noValidate,
+    debug = window.ssh_server.debug,
     custom_font = document.fonts ? document.fonts.values().next().value : undefined,
     default_fonts,
     DISCONNECTED = 0,

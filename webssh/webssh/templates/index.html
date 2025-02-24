@@ -54,6 +54,7 @@
           auto_login: false,
           host: "{{ ssh_host }}",
           port: "{{ ssh_port }}",
+          debug: true,
         };
 
         {% if auto_login %}
@@ -177,8 +178,8 @@
           target="_blank"
           href="https://console.cloud.google.com/run/detail/{{ gcp_region }}/{{ k_service }}/revisions?project={{ project_id }}"
           >Go to Cloud Run service</a
-        ><br />
-        -
+        >
+        |
         <a
           target="_blank"
           href="https://console.cloud.google.com/logs/query;query=resource.type%20%3D%20%22cloud_run_revision%22%0Aresource.labels.service_name%20%3D%20%22{{ k_service }}%22%0Aresource.labels.location%20%3D%20%22{{ gcp_region }}%22%0Aresource.labels.revision_name%3D%22{{ k_revision }}%22;storageScope=project;duration=P1D?project={{ project_id }}"
