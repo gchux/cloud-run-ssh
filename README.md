@@ -153,7 +153,8 @@ gcloud run deploy ${SERVICE_NAME} \
    --no-allow-unauthenticated
 ```
 
-> [!CAUTION] > **It is strongly recommended to use `--no-allow-unauthenticated`** in order to **prevent unauthorized access to the SSH server**.
+> [!CAUTION]
+> **It is strongly recommended to use `--no-allow-unauthenticated`** in order to **prevent unauthorized access to the SSH server**.
 
 > [!IMPORTANT]
 > If `gen1` is needed, then both `ACCESS_LEVEL`, `SSH_USER`/`USER_NAME` must be set to `root`.
