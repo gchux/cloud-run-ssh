@@ -45,25 +45,35 @@
     </style>
 
     <script>
-      window.ssh_server = {
-        host: "{{ ssh_host }}",
-        port: "{{ ssh_port }}",
-        user: "{{ ssh_user }}",
-        pass: "{{ ssh_pass }}",
-      };
+      (function(win) {
+        const ssh_server = {
+          project_id: "{{ project_id }}",
+          k_service: "{{ k_service }}",
+          k_revision: "{{ k_revision }}",
+          instance_id: "{{ instance_id }}",
+          gcp_region: "{{ gcp_region }}",
+          auto_login: false,
+          host: "{{ ssh_host }}",
+          port: "{{ ssh_port }}",
+          debug: true,
+        };
+
+        {% if auto_login %}
+        // only provide credentials if `SSH_AUTO_LOGIN` is enabled
+        ssh_server['user'] = "{{ ssh_user }}";
+        ssh_server['pass'] = "{{ ssh_pass }}";
+        ssh_server['auto_login'] = true;
+        {% end %}
+
+        win.ssh_server = ssh_server;
+      }(window));
     </script>
   </head>
   <body>
     <div id="waiter" style="display: none">Connecting ...</div>
 
     <div class="container form-container" style="display: none">
-      <form
-        id="connect"
-        action=""
-        method="post"
-        enctype="multipart/form-data"
-	{% if debug %}novalidate{% end %}
-      >
+      <form id="connect" action="" method="post" enctype="multipart/form-data">
         <div class="row">
           <div class="col">
             <label for="Hostname">Hostname</label>
@@ -99,7 +109,6 @@
               class="form-control"
               type="text"
               id="username"
-              value="{{ ssh_user }}"
               name="username"
               value=""
               required
@@ -111,7 +120,6 @@
               class="form-control"
               type="password"
               id="password"
-              value="{{ ssh_pass }}"
               name="password"
               value=""
             />
@@ -160,7 +168,25 @@
     </div>
 
     <div class="container">
-      <div id="status" style="color: red"></div>
+      <div id="status" style="color: red">
+        - <b>Project</b>: {{ project_id }}<br />
+        - <b>Service</b>: {{ k_service }}<br />
+        - <b>Region</b>: {{ gcp_region }}<br />
+        - <b>Revision</b>: {{ k_revision }}<br />
+        - <b>Instance ID</b>: <small>{{ instance_id }}</small><br />
+        -
+        <a
+          target="_blank"
+          href="https://console.cloud.google.com/run/detail/{{ gcp_region }}/{{ k_service }}/revisions?project={{ project_id }}"
+          >Go to Cloud Run service</a
+        >
+        |
+        <a
+          target="_blank"
+          href="https://console.cloud.google.com/logs/query;query=resource.type%20%3D%20%22cloud_run_revision%22%0Aresource.labels.service_name%20%3D%20%22{{ k_service }}%22%0Aresource.labels.location%20%3D%20%22{{ gcp_region }}%22%0Aresource.labels.revision_name%3D%22{{ k_revision }}%22%0Alabels.instanceId%3D%22{{ instance_id }}%22;storageScope=project;duration=P1D?project={{ project_id }}"
+          >Go to Cloud Logging</a
+        >
+      </div>
       <div id="terminal"></div>
     </div>
 
