@@ -191,8 +191,8 @@ gcloud run deploy ${SERVICE_NAME} \
 
 - Use `SSH_AUTO_LOGIN=true` if you want to allow users to be automatically logged in and go straight to the `SHELL`.
 
-  > [!NOTE]
-  > This option requires to use `PASSWORD_ACCESS=true`, and `SUDO_ACCESS=true` if the intended user is `root`.
+> [!NOTE]
+> `SSH_AUTO_LOGIN=true` requires to use `PASSWORD_ACCESS=true`, and `SUDO_ACCESS=true` if the intended user is `root`.
 
 - At container execution time, it is possible to override the following parameters:
 
