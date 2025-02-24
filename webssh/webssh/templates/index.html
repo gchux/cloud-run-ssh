@@ -110,9 +110,14 @@
               type="text"
               id="username"
               name="username"
-              {% if auto_login %}
+              {%
+              if
+              auto_login
+              %}
               value="{{ ssh_user }}"
-              {% end %}
+              {%
+              end
+              %}
               required
             />
           </div>
@@ -123,10 +128,14 @@
               type="password"
               id="password"
               name="password"
-              {% if auto_login %}
+              {%
+              if
+              auto_login
+              %}
               value="{{ ssh_pass }}"
-              {% end %}
-              value=""
+              {%
+              end
+              %}
             />
           </div>
         </div>
