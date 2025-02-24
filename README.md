@@ -141,6 +141,10 @@ docker push ${IMAGE_URI_FULL}
 export SERVICE_NAME='...'
 export SERVICE_REGION='...'
 
+export PASSWORD_ACCESS='true|false' # allow users to login using user and password.
+export SUDO_ACCESS='true|false'     # allow users to use `sudo` and login as `root`.
+export SSH_AUTO_LOGIN='true|false'  # allow going straigh to shell; requires `PASSWORD_ACCESS`.
+
 gcloud run deploy ${SERVICE_NAME} \
    --image=${IMAGE_URI_FULL} \
    --region=${SERVICE_REGION} \
@@ -149,7 +153,7 @@ gcloud run deploy ${SERVICE_NAME} \
    --memory=2Gi --cpu=2 --cpu-boost \
    --timeout=3600s --no-use-http2 \
    --session-affinity --no-cpu-throttling \
-   --set-env-vars="SUDO_ACCESS=${SUDO_ACCESS},PASSWORD_ACCESS=${PASSWORD_ACCESS},LOG_STDOUT=true" \
+   --set-env-vars="SUDO_ACCESS=${SUDO_ACCESS},PASSWORD_ACCESS=${PASSWORD_ACCESS},SSH_AUTO_LOGIN=${SSH_AUTO_LOGIN},LOG_STDOUT=true" \
    --no-allow-unauthenticated
 ```
 
@@ -167,7 +171,7 @@ gcloud run deploy ${SERVICE_NAME} \
 
 2. Use a WEB browser, got to: `http://127.0.0.1:8080/`
 
-3. Fill in the following fields:
+3. If `SSH_AUTO_LOGIN` is set to `false`, then fill in the following fields:
 
    - Hostname: `127.0.0.1` _(fixed)_
    - Port: `2222` _(fixed)_
