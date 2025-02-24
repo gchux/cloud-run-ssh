@@ -524,7 +524,7 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
         ip, port = self.get_client_addr()
         workers = clients.get(ip, {})
         if workers and len(workers) >= options.maxconn:
-            raise tornado.web.HTTPError(403, "Too many live connections.")
+            raise tornado.web.HTTPError(429, "Too many live connections.")
 
         self.check_origin()
 
