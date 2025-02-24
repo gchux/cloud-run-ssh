@@ -50,6 +50,7 @@
           project_id: "{{ project_id }}",
           k_service: "{{ k_service }}",
           k_revision: "{{ k_revision }}",
+          instance_id: "{{ instance_id }}",
           gcp_region: "{{ gcp_region }}",
           auto_login: false,
           host: "{{ ssh_host }}",
@@ -182,7 +183,7 @@
         |
         <a
           target="_blank"
-          href="https://console.cloud.google.com/logs/query;query=resource.type%20%3D%20%22cloud_run_revision%22%0Aresource.labels.service_name%20%3D%20%22{{ k_service }}%22%0Aresource.labels.location%20%3D%20%22{{ gcp_region }}%22%0Aresource.labels.revision_name%3D%22{{ k_revision }}%22;storageScope=project;duration=P1D?project={{ project_id }}"
+          href="https://console.cloud.google.com/logs/query;query=resource.type%20%3D%20%22cloud_run_revision%22%0Aresource.labels.service_name%20%3D%20%22{{ k_service }}%22%0Aresource.labels.location%20%3D%20%22{{ gcp_region }}%22%0Aresource.labels.revision_name%3D%22{{ k_revision }}%22%0Alabels.instanceId%3D%22{{ instance_id }}%22;storageScope=project;duration=P1D?project={{ project_id }}"
           >Go to Cloud Logging</a
         >
       </div>
