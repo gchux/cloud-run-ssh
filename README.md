@@ -143,7 +143,7 @@ export SERVICE_REGION='...'
 
 export PASSWORD_ACCESS='true|false' # allow users to login using user and password.
 export SUDO_ACCESS='true|false'     # allow users to use `sudo` and login as `root`.
-export SSH_AUTO_LOGIN='true|false'  # allow going straigh to shell; requires `PASSWORD_ACCESS`.
+export SSH_AUTO_LOGIN='true|false'  # allow going straight to shell; requires `PASSWORD_ACCESS`.
 
 gcloud run deploy ${SERVICE_NAME} \
    --image=${IMAGE_URI_FULL} \
