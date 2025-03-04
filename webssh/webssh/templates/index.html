@@ -173,23 +173,27 @@
 
     <div class="container">
       <div id="status" style="color: red">
-        - <b>Project</b>: {{ project_id }}<br />
-        - <b>Service</b>: {{ k_service }}<br />
-        - <b>Region</b>: {{ gcp_region }}<br />
-        - <b>Revision</b>: {{ k_revision }}<br />
-        - <b>Instance ID</b>: <small>{{ instance_id }}</small><br />
-        -
-        <a
-          target="_blank"
-          href="https://console.cloud.google.com/run/detail/{{ gcp_region }}/{{ k_service }}/revisions?project={{ project_id }}"
-          >Go to Cloud Run service</a
-        >
-        |
-        <a
-          target="_blank"
-          href="https://console.cloud.google.com/logs/query;query=resource.type%20%3D%20%22cloud_run_revision%22%0Aresource.labels.service_name%20%3D%20%22{{ k_service }}%22%0Aresource.labels.location%20%3D%20%22{{ gcp_region }}%22%0Aresource.labels.revision_name%3D%22{{ k_revision }}%22%0Alabels.instanceId%3D%22{{ instance_id }}%22;storageScope=project;duration=P1D?project={{ project_id }}"
-          >Go to Cloud Logging</a
-        >
+        {% if not auto_login %}
+        <div>
+          - <b>Project</b>: {{ project_id }}<br />
+          - <b>Service</b>: {{ k_service }}<br />
+          - <b>Region</b>: {{ gcp_region }}<br />
+          - <b>Revision</b>: {{ k_revision }}<br />
+          - <b>Instance ID</b>: <small>{{ instance_id }}</small><br />
+          -
+          <a
+            target="_blank"
+            href="https://console.cloud.google.com/run/detail/{{ gcp_region }}/{{ k_service }}/revisions?project={{ project_id }}"
+            >Go to Cloud Run service</a
+          >
+          |
+          <a
+            target="_blank"
+            href="https://console.cloud.google.com/logs/query;query=resource.type%20%3D%20%22cloud_run_revision%22%0Aresource.labels.service_name%20%3D%20%22{{ k_service }}%22%0Aresource.labels.location%20%3D%20%22{{ gcp_region }}%22%0Aresource.labels.revision_name%3D%22{{ k_revision }}%22%0Alabels.instanceId%3D%22{{ instance_id }}%22;storageScope=project;duration=P1D?project={{ project_id }}"
+            >Go to Cloud Logging</a
+          >
+        </div>
+        {% end %}
       </div>
       <div id="terminal"></div>
     </div>

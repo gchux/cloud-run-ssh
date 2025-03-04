@@ -96,9 +96,8 @@ trap - TERM INT
 wait ${SSH_WEB_SERVER_PID}
 echo "[INFO] – SSH web server ( PID: ${SSH_WEB_SERVER_PID} ) exited"
 
-kill -15 ${SSH_PROXY_SERVER_POLL_PID}
-kill -15 ${SSH_PROXY_CLIENT_PID}
-
 if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
+  kill -15 ${SSH_PROXY_SERVER_POLL_PID}
+  kill -15 ${SSH_PROXY_CLIENT_PID}
   /poll_ssh_proxy_server 0 DELETE
 fi
