@@ -449,6 +449,8 @@ jQuery(function ($) {
             txt = txt.replaceAll("\x1B[6n", "");
             txt = txt.replaceAll("\x1B[J", "");
             txt = txt.replaceAll("\x1B[K", "");
+            txt = txt.replaceAll("\x1B[1m", "");
+            txt = txt.replaceAll("\x1B[0m", "");
             txt = txt.replaceAll("\x1B[?2004h", "");
             txt = txt.replaceAll("\x1B[?2004l", "");
             transcript.push(txt);
@@ -462,10 +464,11 @@ jQuery(function ($) {
       $copyTranscriptButton[0], {
       text: getTranscript,
     });
-    transcriptModalElement.addEventListener('show.bs.modal', () => {
-      const text = getTranscript();
-      $transcriptContent.text(text || "EMPTY...");
-    });
+    transcriptModalElement.addEventListener(
+      'show.bs.modal', () => {
+        const text = getTranscript();
+        $transcriptContent.text(text || "EMPTY...");
+      });
 
     $clearTranscriptButton.on("click", {
       term, transcript, transcriptModal,
@@ -546,7 +549,7 @@ jQuery(function ($) {
       }
 
       try {
-        JSON.parse(data);
+        JSON.parse(data)/* ; */
         sock.send(data);
       } catch (SyntaxError) {
         data = data.trim() + '\r';
