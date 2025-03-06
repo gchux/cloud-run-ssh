@@ -63,7 +63,6 @@ jQuery(function ($) {
     event_origin,
     hostname_tester = /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))|(^\s*((?=.{1,255}$)(?=.*[A-Za-z].*)[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?(?:\.[0-9A-Za-z](?:(?:[0-9A-Za-z]|\b-){0,61}[0-9A-Za-z])?)*)\s*$)/;
 
-
   function store_items(names, data) {
     var i, name, value;
 
@@ -407,9 +406,86 @@ jQuery(function ($) {
       console.log('The deault encoding of your server is ' + msg.encoding);
     }
 
+    const $transcriptButton = $("#transcriptButton");
+    const $clearTranscriptButton = $("#clearTranscriptBtn");
+    const $copyTranscriptButton = $("#copyTranscriptBtn");
+    const transcriptModalElement = document.getElementById("transcriptModal");
+    const transcriptModal = new bootstrap.Modal(transcriptModalElement, {
+      keyboard: true, focus: false, backdrop: true,
+    });
+    const $transcriptContent = $("#transcript");
+    const transcript = []
+
+    const getTranscript = $.proxy(function () {
+      let text = transcript.join("");
+      while (text.indexOf("\b") != -1) {
+        text = text.replace(/.\x08/, "");
+      }
+      return text;
+    }, { term, transcript })
+
+    const addToTranscript = (function (
+      win,
+      term,
+      transcript,
+      timeout = 1000
+    ) {
+      const data = [];
+
+      let timer;
+
+      win.transcript = transcript;
+      win.logTranscript = function () {
+        console.log(transcript.join(""));
+      };
+
+      return (text) => {
+        clearTimeout(timer);
+        term.write(text);
+        data.push(text);
+        timer = setTimeout(() => {
+          if (data.length > 0) {
+            let txt = data.join("");
+            txt = txt.replaceAll("\x1B[6n", "");
+            txt = txt.replaceAll("\x1B[J", "");
+            txt = txt.replaceAll("\x1B[K", "");
+            txt = txt.replaceAll("\x1B[?2004h", "");
+            txt = txt.replaceAll("\x1B[?2004l", "");
+            transcript.push(txt);
+            data.length = 0;
+          }
+        }, timeout);
+      };
+    })(window, term, transcript, 1000);
+
+    const copyTranscriptButton = new ClipboardJS(
+      $copyTranscriptButton[0], {
+      text: getTranscript,
+    });
+    transcriptModalElement.addEventListener('show.bs.modal', () => {
+      const text = getTranscript();
+      $transcriptContent.text(text || "EMPTY...");
+    });
+
+    $clearTranscriptButton.on("click", {
+      term, transcript, transcriptModal,
+    }, function (e) {
+      const data = e.data;
+      data.transcript.length = 0;
+      transcriptModal.hide();
+    });
+
+    copyTranscriptButton.on('success',
+      function (e) {
+        transcriptModal.hide();
+        e.clearSelection();
+      });
+
     function term_write(text) {
       if (term) {
-        term.write(text);
+        if (text) {
+          addToTranscript(text);
+        }
         if (!term.resized) {
           resize_terminal(term);
           term.resized = true;
@@ -534,10 +610,16 @@ jQuery(function ($) {
       }
     };
 
-    term.onData(function (data) {
-      // console.log(data);
+    function termInputProxy(fn) {
+      return (input) => {
+        // console.log("data:", data);
+        fn.call(this, input);
+      };
+    }
+
+    term.onData(termInputProxy(function (data) {
       sock.send(JSON.stringify({ 'data': data }));
-    });
+    }));
 
     sock.onopen = function () {
       term.open(terminal);
@@ -551,6 +633,7 @@ jQuery(function ($) {
           sock.send(JSON.stringify({ 'data': url_opts_data.command + '\r' }));
         }, 500);
       }
+      $transcriptButton.removeClass("invisible").addClass("visible");
     };
 
     sock.onmessage = function (msg) {
@@ -568,8 +651,10 @@ jQuery(function ($) {
       reset_wssh();
       log_status(e.reason, true);
       state = DISCONNECTED;
-      default_title = 'WebSSH';
+      default_title = 'Cloud Run SSH server';
       title_element.text = default_title;
+      $transcriptButton.removeClass("visible").addClass("invisible");
+      transcript.length = 0
     };
 
     $(window).resize(function () {
