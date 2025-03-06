@@ -408,6 +408,7 @@ jQuery(function ($) {
 
     const $transcriptButton = $("#transcriptButton");
     const $clearTranscriptButton = $("#clearTranscriptBtn");
+    const $cloudRunButton = $("#cloudRunButton");
     const $copyTranscriptButton = $("#copyTranscriptBtn");
     const transcriptModalElement = document.getElementById("transcriptModal");
     const transcriptModal = new bootstrap.Modal(transcriptModalElement, {
@@ -636,7 +637,8 @@ jQuery(function ($) {
           sock.send(JSON.stringify({ 'data': url_opts_data.command + '\r' }));
         }, 500);
       }
-      $transcriptButton.removeClass("invisible").addClass("visible");
+      $transcriptButton.add($cloudRunButton).removeClass("invisible").addClass("visible");
+      transcript.length = 0
     };
 
     sock.onmessage = function (msg) {
@@ -656,7 +658,7 @@ jQuery(function ($) {
       state = DISCONNECTED;
       default_title = 'Cloud Run SSH server';
       title_element.text = default_title;
-      $transcriptButton.removeClass("visible").addClass("invisible");
+      $transcriptButton.add($cloudRunButton).removeClass("visible").addClass("invisible");
       transcript.length = 0
     };
 

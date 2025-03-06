@@ -183,26 +183,37 @@
           -
           <a
             target="_blank"
-            href="https://console.cloud.google.com/run/detail/{{ gcp_region }}/{{ k_service }}/revisions?project={{ project_id }}"
-            >Go to Cloud Run service</a
-          >
+            href="https://console.cloud.google.com/run/detail/{{ gcp_region }}/{{ k_service }}/revisions?project={{ project_id }}">
+            Go to Cloud Run
+          </a>
           |
           <a
             target="_blank"
-            href="https://console.cloud.google.com/logs/query;query=resource.type%20%3D%20%22cloud_run_revision%22%0Aresource.labels.service_name%20%3D%20%22{{ k_service }}%22%0Aresource.labels.location%20%3D%20%22{{ gcp_region }}%22%0Aresource.labels.revision_name%3D%22{{ k_revision }}%22%0Alabels.instanceId%3D%22{{ instance_id }}%22;storageScope=project;duration=P1D?project={{ project_id }}"
-            >Go to Cloud Logging</a
-          >
+            href="https://console.cloud.google.com/logs/query;query=resource.type%20%3D%20%22cloud_run_revision%22%0Aresource.labels.service_name%20%3D%20%22{{ k_service }}%22%0Aresource.labels.location%20%3D%20%22{{ gcp_region }}%22%0Aresource.labels.revision_name%3D%22{{ k_revision }}%22%0Alabels.instanceId%3D%22{{ instance_id }}%22;storageScope=project;duration=P1D?project={{ project_id }}">
+            Go to Cloud Logging
+          </a>
         </div>
         {% end %}
       </div>
-      <span 
-        id="transcriptButton"
-        class="btn btn-outline-light btn-sm position-fixed mt-2 me-4 invisible"
-        style="z-index: 300; top: 0; right: 0;"
-        data-bs-toggle="modal" data-bs-target="#transcriptModal"
-        >
-        transcript
-      </span>
+      <div 
+        id="toolbar"
+        class="container position-fixed top-0 end-0 mt-0 me-2 visible"
+        style="z-index:300;">
+        <span
+          id="cloudRunButton"
+          class="btn btn-outline-warning btn-sm d-inline float-end visible ms-2"
+          data-bs-toggle="modal"
+          data-bs-target="#cloudRunModal">
+          Cloud Run
+        </span>
+        <span
+          id="transcriptButton"
+          class="btn btn-outline-light btn-sm d-inline float-end visible ms-2"
+          data-bs-toggle="modal"
+          data-bs-target="#transcriptModal">
+          Transcript
+        </span>
+      </div>
       <div id="terminal"></div>
     </div>
     
@@ -232,6 +243,50 @@
             </button>
             <button id="clearTranscriptBtn" type="button" class="btn btn-danger">clear</button>
 					</div>
+				</div>
+			</div>
+		</div>
+
+		<div
+      class="modal fade text-dark-emphasis"
+      id="cloudRunModal"
+      tabindex="-1"
+      aria-labelledby="cloudRunModalLabel"
+      aria-hidden="true"
+      data-bs-theme="dark">
+			<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h1 class="modal-title fs-5" id="exampleModalLabel">Cloud Run SSH server</h1>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<div class="modal-body">
+            <div class="card w-100">
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item"><b>Project</b>: <code>{{ project_id }}</code></li>
+                <li class="list-group-item"><b>Service</b>: <code>{{ k_service }}</code></li>
+                <li class="list-group-item"><b>Region</b>: <code>{{ gcp_region }}</code></li>
+                <li class="list-group-item"><b>Revision</b>: <code>{{ k_revision }}</code></li>
+                <li class="list-group-item"><b>Instance</b>: <small><code>{{ instance_id }}</code></small></li>
+              </ul>
+            </div>
+					</div>
+          <div class="modal-footer">
+            <a
+              class="btn btn-success me-2"
+              role="button"
+              target="_blank"
+              href="https://console.cloud.google.com/run/detail/{{ gcp_region }}/{{ k_service }}/revisions?project={{ project_id }}">
+              Go to Cloud Run
+            </a>
+            <a
+              class="btn btn-primary me-2"
+              role="button"
+              target="_blank"
+              href="https://console.cloud.google.com/logs/query;query=resource.type%20%3D%20%22cloud_run_revision%22%0Aresource.labels.service_name%20%3D%20%22{{ k_service }}%22%0Aresource.labels.location%20%3D%20%22{{ gcp_region }}%22%0Aresource.labels.revision_name%3D%22{{ k_revision }}%22%0Alabels.instanceId%3D%22{{ instance_id }}%22;storageScope=project;duration=P1D?project={{ project_id }}">
+              Go to Cloud Logging
+            </a>
+          </div>
 				</div>
 			</div>
 		</div>
