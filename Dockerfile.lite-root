@@ -29,6 +29,9 @@ ARG SUDO_ACCESS="true"
 
 ARG GCSFUSE_VERSION=2.7.0
 ARG GOST_VERSION=3.0.0
+ARG YQ_VERSION=4.45.1
+ARG DOCKER_VERSION=28.0.1
+ARG CREDS_HELPER_VERSION=2.1.25
 
 ENV USER_NAME=${SSH_USER}
 ENV USER_PASSWORD=${SSH_PASS}
@@ -51,13 +54,15 @@ COPY ./cloud_run_ssh_banner /cloud_run_ssh_banner
 COPY ./webssh /webssh
 COPY ./scripts/gcurl /usr/local/bin/gcurl
 COPY ./scripts/gidcurl /usr/local/bin/gidcurl
+COPY ./catalog.json /webssh/webssh/static/json/catalog.json
 
-RUN apk update && apk add --quiet --no-progress \
-    dpkg fuse vim busybox-extras net-tools bind-tools iproute2 \
-    openssl curl wget tmux git bc traceroute tcptraceroute tcpdump mtr nmap redis \
-    python3-dev py3-pip gcc libc-dev libffi-dev
+RUN apk update && apk add --quiet --no-progress bash fuse-overlayfs \
+    dpkg fuse vim busybox-extras net-tools bind-tools iproute2 iptables \
+    openssl curl wget tmux git bc traceroute tcptraceroute tcpdump \
+    mtr nmap redis python3-dev py3-pip gcc libc-dev libffi-dev bash
 
-RUN wget -nv -q -P /usr/bin 'http://www.vdberg.org/~richard/tcpping' && chmod a+rx /usr/bin/tcpping
+RUN wget -nv -q -P /usr/bin 'http://www.vdberg.org/~richard/tcpping' \
+    && chmod a+rx /usr/bin/tcpping
 RUN python -m pip config --user set global.progress_bar off \
     && python -m pip install --break-system-packages --no-cache-dir httpie /webssh
 RUN curl -o /gcsfuse.deb -L \
@@ -88,6 +93,16 @@ RUN if [[ "${USER_NAME}" == "root" ]] ; then \
     && echo -e '\nAllowTcpForwarding yes' >> /etc/ssh/sshd_config \
     && echo -e '\nBanner /cloud_run_ssh_banner' >> /etc/ssh/sshd_config \
     ; fi
+
+RUN chsh -s /bin/bash ${USER_NAME}
+
+RUN curl -sL -o docker.tgz \
+    https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz \
+    && tar -xzf docker.tgz && cp -vf docker/* /usr/bin/ && rm -rvf docker && rm -vf docker.tgz
+
+RUN curl -fsSL \
+    https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v${CREDS_HELPER_VERSION}/docker-credential-gcr_linux_amd64-${CREDS_HELPER_VERSION}.tar.gz \
+    | tar xz docker-credential-gcr && chmod +x docker-credential-gcr && mv docker-credential-gcr /usr/bin/
 
 RUN echo -n "${HTTP_PORT}" > /http.port
 

@@ -1,0 +1,31 @@
+{
+  "cmds": {
+    "ping": {
+      "name": "ping",
+      "links": {
+        "man": "https://man7.org/linux/man-pages/man8/ping.8.html",
+        "man2": "https://manpages.org/ping/8"
+      },
+      "desc": "Check reachability using ICMP",
+      "categories": [
+        "reachability",
+        "connectivity"
+      ],
+      "tpl": "ping -c {{count}} {{host}}",
+      "args": {
+        "count": {
+          "type": "number",
+          "min": 1,
+          "max": 10,
+          "desc": "times to ping remote host",
+          "validate": false
+        },
+        "host": {
+          "type": "string",
+          "desc": "remote host, may be an IPv4 or a hostname",
+          "validate": false
+        }
+      }
+    }
+  }
+}
