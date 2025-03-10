@@ -470,6 +470,7 @@ jQuery(function ($) {
       return text.replaceAll(fixResizeRegex, "\n$1\r")
     }, { term, transcript, fixResizeRegex });
 
+    window.commandQueue = commandQueue;
     window.transcript = transcript;
     window.getTranscript = getTranscript;
     window.logTranscript = _.bind(function () {
@@ -510,7 +511,7 @@ jQuery(function ($) {
     })(transcript, 2000);
 
     const copyTranscriptButton = new ClipboardJS(
-      $copyTranscriptButton[0], {
+      $copyTranscriptButton.get(0), {
       text: getTranscript,
     });
 
@@ -562,11 +563,12 @@ jQuery(function ($) {
         const $arg = $(this);
         const cmdKey = $arg.data("cmd");
         const argKey = $arg.data("arg");
-        if (cmd.key == cmdKey) {
-          const arg = cmd.args[argKey];
+        if (_.eq(cmd.key, cmdKey)) {
+          const argPath = ["args", argKey];
+          const arg = _.get(cmd, argPath);
           const val = $arg.val();
           if (arg && val) {
-            args[argKey] = val;
+            _.set(args, argKey, val);
           }
         }
       });
@@ -608,7 +610,7 @@ jQuery(function ($) {
           const { cmds } = e.data;
           const $el = $(this);
           const cmdKey = $el.data("cmd");
-          const cmd = cmds[cmdKey];
+          const cmd = _.get(cmds, cmdKey);
 
           $commandConfig.empty();
           $.each(cmd.args, function (key, arg) {
@@ -631,12 +633,13 @@ jQuery(function ($) {
         function (e) {
           const { cmds } = e.data;
           const $el = $(this);
-          const cmdKey = $el.data("cmd");
-          const key = $el.data("cmdLink");
-          const cmd = cmds[cmdKey];
-          const link = cmd.links[key];
-          if (link) {
-            window.open(link, "_blank");
+          const key = $el.data("cmd");
+          const link = $el.data("cmdLink");
+          const cmd = _.get(cmds, key);
+          const linkPath = ["links", link];
+          if (_.has(cmd, linkPath)) {
+            const linkURL = _.get(cmd, linkPath);
+            window.open(linkURL, "_blank");
             e.stopImmediatePropagation();
           }
         });
@@ -659,6 +662,7 @@ jQuery(function ($) {
         }
       }
     };
+
     $writeCallbacks.add(term_write);
     $writeCallbacks.add(addToTranscript);
 
