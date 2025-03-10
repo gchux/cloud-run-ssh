@@ -419,8 +419,7 @@ jQuery(function ($) {
     <input id="cmd-arg-{{key}}" data-cmd="{{cmd.key}}" data-arg="{{key}}" type="text" class="form-control cmd-arg" placeholder="{{desc}}">
     <label for="cmd-arg-{{key}}">{{desc}}</label>
   </div>
-</div>
-`
+</div>`;
 
     const $toolbar = $("#toolbar");
     const $commandsButton = $toolbar.find("#commandsButton");
@@ -452,9 +451,10 @@ jQuery(function ($) {
 
     const commandConfigModalElement = document.getElementById("commandConfigModal");
     const commandConfigModal = new bootstrap.Modal(commandConfigModalElement, {
-      keyboard: true, focus: false, backdrop: true,
+      keyboard: false, focus: true, backdrop: 'static',
     });
     const $commandConfigModal = $(commandConfigModalElement);
+    const $command = $commandConfigModal.find("#command");
     const $commandConfig = $commandConfigModal.find("#commandConfig");
     const $runCommandButton = $commandConfigModal.find("#runCommandBtn");
     const $cancelCommandButton = $commandConfigModal.find("#cancelCommandBtn");
@@ -579,12 +579,14 @@ jQuery(function ($) {
 
       commandConfigModal.hide();
       $commandConfig.empty();
+      $command.empty().text("command");
     });
 
     $cancelCommandButton.on("click", function () {
       commandQueue.shift();
       commandConfigModal.hide();
       $commandConfig.empty();
+      $command.empty().text("command");
     });
 
     const onCatalogsLoaded = function (data) {
@@ -595,7 +597,6 @@ jQuery(function ($) {
 
       $.each(data.cmds, function (key, cmd) {
         cmd.key = key;
-        cmd.name = key;
         cmd.providers = {
           cmd: Handlebars.compile(cmd.tpl),
         };
@@ -623,6 +624,7 @@ jQuery(function ($) {
             $commandConfig.append(argTemplate(_arg));
           });
           commandQueue.push(cmd);
+          $command.empty().text(cmd.name);
           offcanvas.hide();
           commandConfigModal.show();
         });
