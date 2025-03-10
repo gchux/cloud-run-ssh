@@ -423,23 +423,27 @@ jQuery(function ($) {
     const $transcriptButton = $toolbar.find("#transcriptButton");
     const $cloudRunButton = $toolbar.find("#cloudRunButton");
 
-    const $commandsCatalog = $("#commandsCatalog");
 
     const $buttons = $toolbar.add($cloudRunButton)
       .add($transcriptButton).add($commandsButton).add($disconnectButton);
 
-    const $copyTranscriptButton = $("#copyTranscriptBtn");
-    const $clearTranscriptButton = $("#clearTranscriptBtn");
     const transcriptModalElement = document.getElementById("transcriptModal");
+    const $transcriptModal = $(transcriptModalElement);
     const transcriptModal = new bootstrap.Modal(transcriptModalElement, {
       keyboard: true, focus: false, backdrop: true,
     });
-    const $transcriptContent = $("#transcript");
+    const $copyTranscriptButton = $transcriptModal.find("#copyTranscriptBtn");
+    const $clearTranscriptButton = $transcriptModal.find("#clearTranscriptBtn");
+    const $transcriptContent = $transcriptModal.find("#transcript");
+    const $isTranscriptEnabled = $transcriptModal.find("#isTranscriptEnabled");
+    let isTranscriptEnabled = false;
     const transcript = []
 
     const offcanvasElement = document.getElementById("offcanvas");
+    const $offcanvas = $(offcanvasElement);
     // const $offcanvas = $(offcanvasElement);
     const offcanvas = new bootstrap.Offcanvas(offcanvasElement);
+    const $commandsCatalog = $offcanvas.find("#commandsCatalog");
 
     const commandConfigModalElement = document.getElementById("commandConfigModal");
     const commandConfigModal = new bootstrap.Modal(commandConfigModalElement, {
@@ -451,19 +455,24 @@ jQuery(function ($) {
     const $cancelCommandButton = $commandConfigModal.find("#cancelCommandBtn");
     const commandQueue = [];
 
-    const fixResizeRegex = /(\r\r.+@?.+?:.+?[#\$]?\s)/g;
-    const getTranscript = $.proxy(function () {
+    const fixResizeRegex = /[\r\n]{2}(.+@?.+?:.+?[#\$]?\s)/g;
+    const getTranscript = _.bind(function () {
       const { transcript, fixResizeRegex } = this;
       let text = transcript.join("");
       while (text.indexOf("\b") != -1) {
         text = text.replace(/.\x08/, "");
       }
-      return text.replaceAll(fixResizeRegex, "$1\r\n")
+      return text.replaceAll(fixResizeRegex, "\n$1\r")
     }, { term, transcript, fixResizeRegex });
 
+    window.transcript = transcript;
+    window.getTranscript = getTranscript;
+    window.logTranscript = _.bind(function () {
+      const { getTranscript } = this;
+      console.log(getTranscript());
+    }, { getTranscript });
+
     const addToTranscript = (function (
-      win,
-      term,
       transcript,
       timeout = 1000
     ) {
@@ -471,17 +480,11 @@ jQuery(function ($) {
 
       let timer;
 
-      win.transcript = transcript;
-      win.getTranscript = getTranscript;
-      win.logTranscript = $.proxy(function () {
-        const { getTranscript } = this;
-        console.log(getTranscript());
-      }, { getTranscript });
-
       return (text) => {
         clearTimeout(timer);
-        term.write(text);
-        data.push(text);
+        if (isTranscriptEnabled) {
+          data.push(text);
+        }
         timer = setTimeout(() => {
           if (data.length > 0) {
             let txt = data.join("");
@@ -492,17 +495,21 @@ jQuery(function ($) {
             txt = txt.replaceAll("\x1B[0m", "");
             txt = txt.replaceAll("\x1B[?2004h", "");
             txt = txt.replaceAll("\x1B[?2004l", "");
-            transcript.push(txt);
+            if (txt) {
+              transcript.push(txt);
+            }
             data.length = 0;
           }
         }, timeout);
       };
-    })(window, term, transcript, 2000);
+    })(transcript, 2000);
 
     const copyTranscriptButton = new ClipboardJS(
       $copyTranscriptButton[0], {
       text: getTranscript,
     });
+
+    const $writeCallbacks = $.Callbacks();
 
     transcriptModalElement.addEventListener('show.bs.modal',
       $.proxy(function () {
@@ -517,6 +524,12 @@ jQuery(function ($) {
       const data = e.data;
       data.transcript.length = 0;
       transcriptModal.hide();
+    });
+
+    $isTranscriptEnabled.on("change", {
+      term, transcript, transcriptModal,
+    }, function () {
+      isTranscriptEnabled = this.checked;
     });
 
     $disconnectButton.on("click",
@@ -562,79 +575,86 @@ jQuery(function ($) {
     });
 
     $cancelCommandButton.on("click", function () {
+      commandQueue.shift();
       commandConfigModal.hide();
       $commandConfig.empty();
-      commandQueue.shift();
     });
 
-    const initialize = function () {
+    const onCatalogsLoaded = function (data) {
       htmlTemplate = Handlebars.compile(commandCatalogEntryTemplate);
       argTemplate = Handlebars.compile(commandArgumentInputTemplate);
 
-      $.getJSON("/static/json/catalog.json", function (data) {
-        $commandsCatalog.empty();
+      $commandsCatalog.empty();
 
-        $.each(data.cmds, function (key, cmd) {
-          cmd.key = key;
-          cmd.name = key;
-          cmd.providers = {
-            cmd: Handlebars.compile(cmd.tpl),
-          };
-          $commandsCatalog.append(htmlTemplate(cmd));
+      $.each(data.cmds, function (key, cmd) {
+        cmd.key = key;
+        cmd.name = key;
+        cmd.providers = {
+          cmd: Handlebars.compile(cmd.tpl),
+        };
+        $commandsCatalog.append(htmlTemplate(cmd));
+      });
+
+      $commandsCatalog.off("click.cmd-exec", ".cmd-exec");
+      $commandsCatalog.on("click.cmd-exec",
+        ".cmd-exec", data,
+        function (e) {
+          const { cmds } = e.data;
+          const $el = $(this);
+          const cmdKey = $el.data("cmd");
+          const cmd = cmds[cmdKey];
+
+          $commandConfig.empty();
+          $.each(cmd.args, function (key, arg) {
+            const _arg = $.extend({}, arg);
+            _arg.key = key;
+            _arg.name = key;
+            _arg.cmd = $.extend({}, cmd);
+            delete _arg.cmd.args;
+            delete _arg.cmd.providers;
+            $commandConfig.append(argTemplate(_arg));
+          });
+          commandQueue.push(cmd);
+          offcanvas.hide();
+          commandConfigModal.show();
         });
 
-        $commandsCatalog.off("click", ".cmd-exec");
-        $commandsCatalog.on("click",
-          ".cmd-exec", data,
-          function (e) {
-            const { cmds } = e.data;
-            const $el = $(this);
-            const cmdKey = $el.data("cmd");
-            const cmd = cmds[cmdKey];
+      $commandsCatalog.off("click.cmd-link", ".cmd-link");
+      $commandsCatalog.on("click.cmd-link",
+        ".cmd-link", data,
+        function (e) {
+          const { cmds } = e.data;
+          const $el = $(this);
+          const cmdKey = $el.data("cmd");
+          const key = $el.data("cmdLink");
+          const cmd = cmds[cmdKey];
+          const link = cmd.links[key];
+          if (link) {
+            window.open(link, "_blank");
+            e.stopImmediatePropagation();
+          }
+        });
+    };
 
-            $commandConfig.empty();
-            $.each(cmd.args, function (key, arg) {
-              const _arg = $.extend({}, arg);
-              _arg.key = key;
-              _arg.name = key;
-              _arg.cmd = $.extend({}, cmd);
-              delete _arg.cmd.args;
-              delete _arg.cmd.providers;
-              $commandConfig.append(argTemplate(_arg));
-            });
-            commandQueue.push(cmd);
-            offcanvas.hide();
-            commandConfigModal.show();
-          });
-
-        $commandsCatalog.on("click",
-          ".cmd-link", data,
-          function (e) {
-            const { cmds } = e.data;
-            const $el = $(this);
-            const cmdKey = $el.data("cmd");
-            const key = $el.data("cmdLink");
-            const cmd = cmds[cmdKey];
-            const link = cmd.links[key];
-            if (link) {
-              window.open(link, "_blank");
-              e.stopPropagation();
-            }
-          });
-      });
+    const initialize = function () {
+      $.when(
+        $.getJSON("/static/json/catalog.json")
+      ).done(onCatalogsLoaded);
     }
 
-    function term_write(text) {
+    const term_write = function (text) {
       if (term) {
         if (text) {
-          addToTranscript(text);
+          term.write(text);
         }
         if (!term.resized) {
           resize_terminal(term);
           term.resized = true;
         }
       }
-    }
+    };
+    $writeCallbacks.add(term_write);
+    $writeCallbacks.add(addToTranscript);
 
     function set_encoding(new_encoding) {
       // for console use
@@ -782,7 +802,7 @@ jQuery(function ($) {
     };
 
     sock.onmessage = function (msg) {
-      read_file_as_text(msg.data, term_write, decoder);
+      read_file_as_text(msg.data, $writeCallbacks.fire, decoder);
     };
 
     sock.onerror = function (e) {
