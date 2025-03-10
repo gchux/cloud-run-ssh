@@ -401,6 +401,11 @@ jQuery(function ($) {
 <a href="#" class="list-group-item list-group-item-action cmd-exec" data-cmd="{{key}}">
   <div class="d-flex w-100 justify-content-between">
     <h5 class="mb-1"><code>{{name}}</code></h5>
+    <small>
+      {{#each tags}}
+      <span class="badge text-bg-light rounded-pill">{{.}}</span>
+      {{/each}}
+    </small>
   </div>
   <p class="mb-1">{{desc}}</p>
   <small>
@@ -592,6 +597,7 @@ jQuery(function ($) {
         cmd.providers = {
           cmd: Handlebars.compile(cmd.tpl),
         };
+        delete cmd.tpl;
         $commandsCatalog.append(htmlTemplate(cmd));
       });
 

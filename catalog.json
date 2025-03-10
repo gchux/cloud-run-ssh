@@ -7,7 +7,7 @@
         "man2": "https://manpages.org/ping/8"
       },
       "desc": "Check reachability using ICMP",
-      "categories": [
+      "tags": [
         "reachability",
         "connectivity"
       ],
