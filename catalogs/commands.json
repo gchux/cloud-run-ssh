@@ -7,13 +7,12 @@
       },
       "desc": "Check reachability using ICMP",
       "tags": [
-        "reachability",
-        "connectivity"
+        "reachability"
       ],
       "tpl": "ping -c {{count}} {{host}}",
       "args": {
         "count": {
-          "type": "number",
+          "type": "integer",
           "min": 1,
           "max": 10,
           "desc": "times to ping remote host",
@@ -22,6 +21,84 @@
         "host": {
           "type": "string",
           "desc": "remote host, may be an IPv4 or a hostname",
+          "validate": false
+        }
+      }
+    },
+    "curl_telnet": {
+      "name": "curl-telnet",
+      "links": {
+        "man": "https://curl.se/docs/manpage.html",
+        "man2": "https://manpages.org/curl"
+      },
+      "desc": "Check connectivity using TCP",
+      "tags": [
+        "reachability",
+        "connectivity"
+      ],
+      "tpl": "curl -v telnet://{{host}}:{{port}}",
+      "args": {
+        "host": {
+          "type": "string",
+          "desc": "remote host, may be an IP or a hostname",
+          "validate": false
+        },
+        "port": {
+          "type": "integer",
+          "min": 1,
+          "max": 65535,
+          "desc": "TCP port to connect",
+          "validate": false
+        }
+      }
+    },
+    "telnet": {
+      "links": {
+        "man": "https://manpages.org/telnet"
+      },
+      "desc": "Check connectivity using TCP",
+      "tags": [
+        "reachability",
+        "connectivity"
+      ],
+      "tpl": "telnet {{host}} {{port}}",
+      "args": {
+        "host": {
+          "type": "string",
+          "desc": "remote host, may be an IP or a hostname",
+          "validate": false
+        },
+        "port": {
+          "type": "integer",
+          "min": 1,
+          "max": 65535,
+          "desc": "TCP port to connect",
+          "validate": false
+        }
+      }
+    },
+    "tcpping": {
+      "links": {
+        "man": "http://www.vdberg.org/~richard/tcpping.html"
+      },
+      "desc": "Check connectivity and latency using TCP",
+      "tags": [
+        "reachability",
+        "connectivity",
+        "latency"
+      ],
+      "tpl": "tcpping {{host}} {{port}}",
+      "args": {
+        "host": {
+          "type": "string",
+          "desc": "remote host, may be an IP or a hostname",
+          "validate": false
+        },
+        "port": {
+          "type": "integer",
+          "min": 1,
+          "max": 65535,
+          "desc": "TCP port to connect",
           "validate": false
         }
       }

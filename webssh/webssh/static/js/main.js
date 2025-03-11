@@ -679,6 +679,8 @@ jQuery(function ($) {
       $.when(
         $.getJSON("/static/json/commands.json")
       ).done(onCatalogsLoaded);
+      $buttons.removeClass("invisible").addClass("visible");
+      transcript.length = 0
     }
 
     const term_write = function (text) {
@@ -728,7 +730,6 @@ jQuery(function ($) {
     } else {
       set_encoding(msg.encoding);
     }
-
 
     wssh.geometry = function () {
       // for console use
@@ -836,8 +837,6 @@ jQuery(function ($) {
           sock.send(JSON.stringify({ 'data': url_opts_data.command + '\r' }));
         }, 500);
       }
-      $buttons.removeClass("invisible").addClass("visible");
-      transcript.length = 0
       initialize();
     };
 
