@@ -59,7 +59,7 @@ COPY ./catalogs/commands.json /webssh/webssh/static/json/commands.json
 RUN apk update && apk add --quiet --no-progress bash fuse-overlayfs \
     dpkg fuse vim busybox-extras net-tools bind-tools iproute2 iptables \
     openssl curl wget tmux git bc traceroute tcptraceroute tcpdump \
-    mtr nmap redis python3-dev py3-pip gcc libc-dev libffi-dev bash strace
+    mtr nmap redis python3-dev py3-pip gcc libc-dev libffi-dev strace
 
 RUN wget -nv -q -P /usr/bin 'http://www.vdberg.org/~richard/tcpping' \
     && chmod a+rx /usr/bin/tcpping
