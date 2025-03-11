@@ -414,7 +414,7 @@ jQuery(function ($) {
 </a>`;
     const commandArgumentInputTemplate = `
 <div class="input-group flex-nowrap" data-cmd="{{cmd.key}}" data-cmd-arg="{{key}}">
-  <span class="input-group-text" id="addon-wrapping">{{name}}</span>
+  <span class="input-group-text" id="addon-wrapping">{{label}}</span>
   <div class="form-floating">
     <input id="cmd-arg-{{key}}" data-cmd="{{cmd.key}}" data-arg="{{key}}" type="text" class="form-control cmd-arg" placeholder="{{desc}}">
     <label for="cmd-arg-{{key}}">{{desc}}</label>
@@ -445,7 +445,6 @@ jQuery(function ($) {
 
     const offcanvasElement = document.getElementById("offcanvas");
     const $offcanvas = $(offcanvasElement);
-    // const $offcanvas = $(offcanvasElement);
     const offcanvas = new bootstrap.Offcanvas(offcanvasElement);
     const $commandsCatalog = $offcanvas.find("#commandsCatalog");
 
@@ -460,14 +459,31 @@ jQuery(function ($) {
     const $cancelCommandButton = $commandConfigModal.find("#cancelCommandBtn");
     const commandQueue = [];
 
+    // const controlSequenceRegex = /\x1B\[([0-9]*;)*[\?]?[0-9]*[a-zA-Z]/g;
+    const controlSequenceRegex = /\x1B(([\[\]]([0-9]*;)*[\?>]?([0-9]*[a-zA-Z])?)|([\(\)>=][0A-Z]?))?/g;
     const fixResizeRegex = /[\r\n]{2}(.+@?.+?:.+?[#\$]?\s)/g;
+
     const getTranscript = _.bind(function () {
-      const { transcript, fixResizeRegex } = this;
-      let text = transcript.join("");
-      while (text.indexOf("\b") != -1) {
-        text = text.replace(/.\x08/, "");
+      const {
+        transcript,
+        fixResizeRegex,
+      } = this;
+
+      if (_.isEmpty(transcript)) {
+        return null;
       }
-      return text.replaceAll(fixResizeRegex, "\n$1\r")
+
+      let text = _.join(transcript, '');
+      const rgx = /.\x08/;
+      while (text.indexOf("\b") != -1) {
+        text = text.replace(rgx, "");
+      }
+      text = text.replaceAll(fixResizeRegex, "\n$1\r")
+
+      if (_.isEmpty(text)) {
+        return null;
+      }
+      return text;
     }, { term, transcript, fixResizeRegex });
 
     window.commandQueue = commandQueue;
@@ -494,13 +510,8 @@ jQuery(function ($) {
         timer = setTimeout(() => {
           if (data.length > 0) {
             let txt = data.join("");
-            txt = txt.replaceAll("\x1B[6n", "");
-            txt = txt.replaceAll("\x1B[J", "");
-            txt = txt.replaceAll("\x1B[K", "");
-            txt = txt.replaceAll("\x1B[1m", "");
-            txt = txt.replaceAll("\x1B[0m", "");
-            txt = txt.replaceAll("\x1B[?2004h", "");
-            txt = txt.replaceAll("\x1B[?2004l", "");
+            txt = txt.replaceAll(controlSequenceRegex, "");
+            txt = _.join(_.compact(_.split(txt, '\r\n')), '\n');
             if (txt) {
               transcript.push(txt);
             }
@@ -516,12 +527,17 @@ jQuery(function ($) {
     });
 
     const $writeCallbacks = $.Callbacks();
+    const $commandCallbacks = $.Callbacks();
 
     transcriptModalElement.addEventListener('show.bs.modal',
       $.proxy(function () {
-        const { getTranscript, $transcriptContent } = this;
-        const text = getTranscript();
-        $transcriptContent.text(text || "<EMPTY>");
+        const {
+          getTranscript,
+          $transcriptContent,
+        } = this;
+        $transcriptContent.text(
+          _.defaultTo(getTranscript(), "EMPTY...")
+        );
       }, { getTranscript, $transcriptContent }));
 
     $clearTranscriptButton.on("click", {
@@ -554,6 +570,21 @@ jQuery(function ($) {
         e.clearSelection();
       });
 
+    $commandCallbacks.add(
+      _.bind(function (op, cmd) {
+        const {
+          commandConfigModal,
+          $command,
+          $commandConfig,
+        } = this;
+
+        commandConfigModal.hide();
+        $commandConfig.empty();
+        $command.empty().text("command");
+
+        console.log(`${op} => ${cmd.name}`, cmd);
+      }, { commandConfigModal, $command, $commandConfig }));
+
     $runCommandButton.on("click", function () {
       const cmd = commandQueue.shift();
       const $args = $commandConfig.find(".cmd-arg");
@@ -577,36 +608,33 @@ jQuery(function ($) {
         wssh.send(cmd.providers.cmd(args) + "\n");
       }
 
-      commandConfigModal.hide();
-      $commandConfig.empty();
-      $command.empty().text("command");
+      $commandCallbacks.fire("exec", cmd);
     });
 
     $cancelCommandButton.on("click", function () {
-      commandQueue.shift();
-      commandConfigModal.hide();
-      $commandConfig.empty();
-      $command.empty().text("command");
+      const cmd = commandQueue.shift();
+      $commandCallbacks.fire("abort", cmd);
     });
 
-    const onCatalogsLoaded = function (data) {
+    const onCatalogsLoaded = function (commands) {
       htmlTemplate = Handlebars.compile(commandCatalogEntryTemplate);
       argTemplate = Handlebars.compile(commandArgumentInputTemplate);
 
       $commandsCatalog.empty();
 
-      $.each(data.cmds, function (key, cmd) {
+      $.each(commands.cmds, function (key, cmd) {
         cmd.key = key;
+        cmd.name = _.defaultTo(cmd.name, key);
         cmd.providers = {
           cmd: Handlebars.compile(cmd.tpl),
         };
-        delete cmd.tpl;
+        _.omit(cmd, 'tpl');
         $commandsCatalog.append(htmlTemplate(cmd));
       });
 
       $commandsCatalog.off("click.cmd-exec", ".cmd-exec");
       $commandsCatalog.on("click.cmd-exec",
-        ".cmd-exec", data,
+        ".cmd-exec", commands,
         function (e) {
           const { cmds } = e.data;
           const $el = $(this);
@@ -615,12 +643,11 @@ jQuery(function ($) {
 
           $commandConfig.empty();
           $.each(cmd.args, function (key, arg) {
-            const _arg = $.extend({}, arg);
+            const _cmd = _.extend({}, cmd);
+            const _arg = _.extend({}, arg);
             _arg.key = key;
-            _arg.name = key;
-            _arg.cmd = $.extend({}, cmd);
-            delete _arg.cmd.args;
-            delete _arg.cmd.providers;
+            _arg.label = _.defaultTo(_arg.label, key);
+            _arg.cmd = _.omit(_cmd, ['args', 'providers']);
             $commandConfig.append(argTemplate(_arg));
           });
           commandQueue.push(cmd);
@@ -631,7 +658,7 @@ jQuery(function ($) {
 
       $commandsCatalog.off("click.cmd-link", ".cmd-link");
       $commandsCatalog.on("click.cmd-link",
-        ".cmd-link", data,
+        ".cmd-link", commands,
         function (e) {
           const { cmds } = e.data;
           const $el = $(this);
@@ -648,8 +675,9 @@ jQuery(function ($) {
     };
 
     const initialize = function () {
+      // load all required catalogs
       $.when(
-        $.getJSON("/static/json/catalog.json")
+        $.getJSON("/static/json/commands.json")
       ).done(onCatalogsLoaded);
     }
 
@@ -894,7 +922,7 @@ jQuery(function ($) {
     }
 
     if (!port) {
-      port = 22;
+      port = 2222;
     } else {
       if (!(port > 0 && port <= 65535)) {
         errors.push('Invalid port: ' + port);

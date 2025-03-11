@@ -1,7 +1,6 @@
 {
   "cmds": {
     "ping": {
-      "name": "ping",
       "links": {
         "man": "https://man7.org/linux/man-pages/man8/ping.8.html",
         "man2": "https://manpages.org/ping/8"

@@ -54,7 +54,7 @@ COPY ./cloud_run_ssh_banner /cloud_run_ssh_banner
 COPY ./webssh /webssh
 COPY ./scripts/gcurl /usr/local/bin/gcurl
 COPY ./scripts/gidcurl /usr/local/bin/gidcurl
-COPY ./catalog.json /webssh/webssh/static/json/catalog.json
+COPY ./catalogs/commands.json /webssh/webssh/static/json/commands.json
 
 RUN apk update && apk add --quiet --no-progress bash fuse-overlayfs \
     dpkg fuse vim busybox-extras net-tools bind-tools iproute2 iptables \
