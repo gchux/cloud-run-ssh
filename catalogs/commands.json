@@ -7,7 +7,8 @@
       },
       "desc": "Check reachability using ICMP",
       "tags": [
-        "reachability"
+        "reachability",
+        "latency"
       ],
       "tpl": "ping -c {{count}} {{host}}",
       "args": {
