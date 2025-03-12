@@ -537,16 +537,17 @@ jQuery(function ($) {
     const $writeCallbacks = $.Callbacks();
     const $commandCallbacks = $.Callbacks();
 
-    transcriptModalElement.addEventListener('show.bs.modal',
-      $.proxy(function () {
-        const {
-          getTranscript,
-          $transcriptContent,
-        } = this;
-        $transcriptContent.text(
-          _.defaultTo(getTranscript(), "EMPTY...")
-        );
-      }, { getTranscript, $transcriptContent }));
+    transcriptModalElement
+      .addEventListener('show.bs.modal',
+        $.proxy(function () {
+          const {
+            getTranscript,
+            $transcriptContent,
+          } = this;
+          $transcriptContent.text(
+            _.defaultTo(getTranscript(), "EMPTY...")
+          );
+        }, { getTranscript, $transcriptContent }));
 
     $clearTranscriptButton.on("click", {
       term, transcript, transcriptModal,
@@ -633,11 +634,12 @@ jQuery(function ($) {
       downloadModal.hide();
     });
 
-    downloadModalElement.addEventListener('hide.bs.modal',
-      $.proxy(function () {
-        const { $downloadFile } = this;
-        $downloadFile.val("");
-      }, { $downloadFile }));
+    downloadModalElement
+      .addEventListener('hide.bs.modal',
+        $.proxy(function () {
+          const { $downloadFile } = this;
+          $downloadFile.val("");
+        }, { $downloadFile }));
 
     const onCatalogsLoaded = function (commands) {
       htmlTemplate = Handlebars.compile(commandCatalogEntryTemplate);
@@ -651,7 +653,7 @@ jQuery(function ($) {
         cmd.providers = {
           cmd: Handlebars.compile(cmd.tpl),
         };
-        _.omit(cmd, 'tpl');
+        cmd = _.omit(cmd, 'tpl');
         $commandsCatalog.append(htmlTemplate(cmd));
       });
 
