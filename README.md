@@ -8,6 +8,16 @@ During development and while troubleshooting issues, it is often very useful to 
 
 The **`Cloud Run SSH server`** aims to provide full linux shell running in a Cloud Run service instance to allow developers and administrators to test and troubleshoot all kinds of scenarios.
 
+## Features
+
+- SSH server for Cloud Run gen1 and gen2.
+- Get a text transcript of the SSH session.
+- Download files from the SSH server filesystem.
+- Execute commands from the UI using a catalaog with 2 clicks.
+- Automatically log into the SSH server using [Cloud Run proxy](https://cloud.google.com/sdk/gcloud/reference/run/services/proxy).
+
+![cloud_run_ssh_ui](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_ui.png?raw=true)
+
 ## Building Blocks:
 
 - [docker-openssh-server](https://github.com/linuxserver/docker-openssh-server): provides the SSH server.
@@ -191,8 +201,7 @@ gcloud run deploy ${SERVICE_NAME} \
 
 - Use `SSH_AUTO_LOGIN=true` if you want to allow users to be automatically logged in and go straight to the `SHELL`.
 
-> [!NOTE]
-> `SSH_AUTO_LOGIN=true` requires `PASSWORD_ACCESS=true`, and `SUDO_ACCESS=true` if the intended user is `root`.
+> [!NOTE] > `SSH_AUTO_LOGIN=true` requires `PASSWORD_ACCESS=true`, and `SUDO_ACCESS=true` if the intended user is `root`.
 
 - At container execution time, it is possible to override the following parameters:
 
