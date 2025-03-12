@@ -15,7 +15,7 @@ The **`Cloud Run SSH server`** aims to provide full linux shell running in a Clo
 - Download files from the SSH server filesystem.
 - Execute commands from the UI using a catalaog with 2 clicks.
 - Automatically log into the SSH server using [Cloud Run proxy](https://cloud.google.com/sdk/gcloud/reference/run/services/proxy).
-- Run [Docker][https://docs.docker.com/engine/] containers on top of Cloud Run gen2.
+- Run [Docker](https://docs.docker.com/engine/) containers on top of Cloud Run gen2.
 
 ![cloud_run_ssh_ui](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_ui.png?raw=true)
 
