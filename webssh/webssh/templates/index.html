@@ -228,6 +228,14 @@
           Transcript
         </span>
         <span
+          id="downloadButton"
+          class="btn btn-outline-info btn-sm d-inline float-end invisible ms-2"
+          data-bs-toggle="modal"
+          data-bs-target="#downloadModal"
+        >
+          Download
+        </span>
+        <span
           id="disconnectButton"
           class="btn btn-outline-danger btn-sm d-inline float-end invisible ms-2"
         >
@@ -255,8 +263,10 @@
                 role="switch"
                 id="isTranscriptEnabled" \>
             </div>
-            <h1 class="modal-title fs-5" id="exampleModalLabel">
-              Cloud Run SSH server transcript
+            <h1
+              class="modal-title fs-5"
+              id="transcriptModalLabel">
+              SSH session transcript
             </h1>
             <button
               type="button"
@@ -291,6 +301,54 @@
 
     <div
       class="modal fade text-dark-emphasis"
+      id="downloadModal"
+      tabindex="-1"
+      aria-labelledby="downloadModalLabel"
+      aria-hidden="true"
+      data-bs-theme="dark"
+    >
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1
+              class="modal-title fs-5"
+              id="downloadModalLabel">
+              Download a file
+            </h1>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="input-group mb-3">
+              <span class="input-group-text" id="dl-file-name"><b>/dl/</b></span>
+              <input
+                id="downloadFile"
+                class="form-control"
+                type="text"
+                placeholder="relative path"
+                aria-label="relative path"
+                aria-describedby="dl-file-name" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              id="downloadBtn"
+              type="button"
+              class="btn btn-primary"
+            >
+              Download
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal fade text-dark-emphasis"
       id="cloudRunModal"
       tabindex="-1"
       aria-labelledby="cloudRunModalLabel"
@@ -300,7 +358,9 @@
       <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
           <div class="modal-header">
-            <h1 class="modal-title fs-5" id="exampleModalLabel">
+            <h1
+              class="modal-title fs-5"
+              id="cloudRunModalLabel">
               Cloud Run SSH server
             </h1>
             <button
@@ -366,7 +426,9 @@
       <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
           <div class="modal-header">
-            <h1 class="modal-title fs-5" id="exampleModalLabel">
+            <h1
+              class="modal-title fs-5"
+              id="commandConfigModalLabel">
               Configure <code id="command">command</code> execution
             </h1>
           </div>
@@ -403,7 +465,11 @@
       data-bs-theme="dark"
     >
       <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="offcanvasLabel">Commands Catalog</h5>
+        <h5
+          class="offcanvas-title"
+          id="offcanvasLabel">
+          Commands Catalog
+        </h5>
         <button
           type="button"
           class="btn-close"

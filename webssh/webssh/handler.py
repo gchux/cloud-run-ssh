@@ -334,6 +334,7 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
 
     def initialize(self, loop, policy, host_keys_settings):
         super(IndexHandler, self).initialize(loop)
+        logging.debug("initialize::IndexHandler")
         self.policy = policy
         self.host_keys_settings = host_keys_settings
         self.ssh_client = self.get_ssh_client()
@@ -555,6 +556,7 @@ class WsockHandler(MixinHandler, tornado.websocket.WebSocketHandler):
 
     def initialize(self, loop):
         super(WsockHandler, self).initialize(loop)
+        logging.debug("initialize::WsockHandler")
         self.worker_ref = None
 
     def open(self):

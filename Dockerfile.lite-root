@@ -106,6 +106,8 @@ RUN curl -fsSL \
 
 RUN echo -n "${HTTP_PORT}" > /http.port
 
+RUN mkdir -pv /dl/
+
 EXPOSE ${HTTP_PORT}/tcp
 
 CMD ["exec", "env", "/init_wssh"]

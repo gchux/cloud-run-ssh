@@ -426,9 +426,9 @@ jQuery(function ($) {
     const $disconnectButton = $toolbar.find("#disconnectButton");
     const $transcriptButton = $toolbar.find("#transcriptButton");
     const $cloudRunButton = $toolbar.find("#cloudRunButton");
+    const $downloadButton = $toolbar.find("#downloadButton");
 
-
-    const $buttons = $toolbar.add($cloudRunButton)
+    const $buttons = $toolbar.add($cloudRunButton).add($downloadButton)
       .add($transcriptButton).add($commandsButton).add($disconnectButton);
 
     const transcriptModalElement = document.getElementById("transcriptModal");
@@ -458,6 +458,14 @@ jQuery(function ($) {
     const $runCommandButton = $commandConfigModal.find("#runCommandBtn");
     const $cancelCommandButton = $commandConfigModal.find("#cancelCommandBtn");
     const commandQueue = [];
+
+    const downloadModalElement = document.getElementById("downloadModal");
+    const downloadModal = new bootstrap.Modal(downloadModalElement, {
+      keyboard: true, focus: true, backdrop: true,
+    });
+    const $downloadModal = $(downloadModalElement)
+    const $downloadFileButton = $downloadModal.find("#downloadBtn");
+    const $downloadFile = $downloadModal.find("#downloadFile");
 
     // const controlSequenceRegex = /\x1B\[([0-9]*;)*[\?]?[0-9]*[a-zA-Z]/g;
     const controlSequenceRegex = /\x1B(([\[\]]([0-9]*;)*[\?>]?([0-9]*[a-zA-Z])?)|([\(\)>=][0A-Z]?))?/g;
@@ -615,6 +623,21 @@ jQuery(function ($) {
       const cmd = commandQueue.shift();
       $commandCallbacks.fire("abort", cmd);
     });
+
+    $downloadFileButton.on("click", function () {
+      const relativePath = $downloadFile.val();
+      if (relativePath) {
+        const path = _.join(["/dl", relativePath], "/");
+        window.open(path, "_blank");
+      }
+      downloadModal.hide();
+    });
+
+    downloadModalElement.addEventListener('hide.bs.modal',
+      $.proxy(function () {
+        const { $downloadFile } = this;
+        $downloadFile.val("");
+      }, { $downloadFile }));
 
     const onCatalogsLoaded = function (commands) {
       htmlTemplate = Handlebars.compile(commandCatalogEntryTemplate);
@@ -860,6 +883,9 @@ jQuery(function ($) {
       $buttons.removeClass("visible").addClass("invisible");
       transcript.length = 0
       offcanvas.hide();
+      downloadModal.hide();
+      transcriptModal.hide();
+      commandConfigModal.hide();
     };
 
     $(window).resize(function () {
