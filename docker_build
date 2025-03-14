@@ -67,6 +67,9 @@ docker buildx build \
   --build-arg="ALLOYDB_PROXY_VERSION=${ALLOYDB_PROXY_VERSION}" \
   --build-arg="USQL_VERSION=${USQL_VERSION}" \
   --build-arg="GOST_VERSION=${GOST_VERSION}" \
+  --build-arg="YQ_VERSION=${YQ_VERSION}" \
+  --build-arg="DOCKER_VERSION=${DOCKER_VERSION}" \
+  --build-arg="VSCODE_VERSION=${VSCODE_VERSION}" \
   --label="CONTENT_FLAVOR=v${CONTENT_FLAVOR}" \
   --label="ACCESS_LEVEL=v${ACCESS_LEVEL}" \
   --label="SSH_SERVER_VERSION=v${SSH_SERVER_VERSION}" \
@@ -76,6 +79,9 @@ docker buildx build \
   --label="ALLOYDB_PROXY_VERSION=v${ALLOYDB_PROXY_VERSION}" \
   --label="USQL_VERSION=v${USQL_VERSION}" \
   --label="GOST_VERSION=${GOST_VERSION}" \
+  --label="YQ_VERSION=${YQ_VERSION}" \
+  --label="DOCKER_VERSION=${DOCKER_VERSION}" \
+  --label="VSCODE_VERSION=${VSCODE_VERSION}" \
   --build-arg="SSH_USER=${SSH_USER}" \
   --build-arg="SSH_PASS=${SSH_PASS}" \
   --build-arg="WEB_PORT=${WEB_PORT}" \

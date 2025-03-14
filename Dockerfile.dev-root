@@ -1,0 +1,137 @@
+# syntax=docker/dockerfile:1.4
+#
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+ARG SSH_SERVER_VERSION=amd64-9.7_p1-r4-ls174
+
+FROM --platform=linux/amd64 lscr.io/linuxserver/openssh-server:${SSH_SERVER_VERSION}
+# base image: https://github.com/linuxserver/docker-openssh-server
+
+ARG SSH_SERVER_VERSION=amd64-9.7_p1-r4-ls174
+
+ARG APP_PORT="8080"
+ARG DEV_PORT="8088"
+ARG WEB_PORT="8022"
+
+ARG SSH_USER="root"
+ARG SSH_PASS="pass"
+ARG PASSWORD_ACCESS="true"
+ARG SUDO_ACCESS="true"
+
+ARG GCSFUSE_VERSION=2.7.0
+ARG GOST_VERSION=3.0.0
+ARG YQ_VERSION=4.45.1
+ARG DOCKER_VERSION=28.0.1
+ARG CREDS_HELPER_VERSION=2.1.25
+ARG VSCODE_VERSION=4.98.0
+
+ENV USER_NAME=${SSH_USER}
+ENV USER_PASSWORD=${SSH_PASS}
+
+ENV WEBAPP_PORT=${APP_PORT}
+ENV WEBDEV_PORT=${DEV_PORT}
+ENV WEBSSH_PORT=${WEB_PORT}
+
+ENV PASSWORD_ACCESS=${PASSWORD_ACCESS}
+ENV SUDO_ACCESS=${SUDO_ACCESS}
+ENV LOG_STDOUT=true
+ENV SSH_PORT=2222
+
+ENV PUID=0
+ENV PGID=0
+
+USER 0:0
+
+WORKDIR /
+
+COPY ./init_svc ./init_nginx ./init_wssh ./init_dockerd ./init_vscode ./keys/authorized_keys* /
+COPY ./dev.conf /svc.conf
+COPY ./keys/*.pub /pubkeys/
+COPY ./ssh_proxy_client.yaml /ssh_proxy_client.yaml
+COPY ./poll_ssh_proxy_server /poll_ssh_proxy_server
+COPY ./cloud_run_ssh_banner /cloud_run_ssh_banner
+COPY ./webssh /webssh
+COPY ./dev_nginx.conf /nginx.conf.template
+
+COPY ./scripts/gcurl /usr/local/bin/gcurl
+COPY ./scripts/gidcurl /usr/local/bin/gidcurl
+
+COPY ./catalogs/commands.json /webssh/webssh/static/json/commands.json
+
+RUN apk update && apk add --quiet --no-progress nginx bash gettext fuse-overlayfs \
+    dpkg fuse vim busybox-extras net-tools bind-tools iproute2 iptables \
+    openssl curl wget tmux git bc traceroute tcptraceroute tcpdump libc6-compat \
+    mtr nmap redis python3-dev py3-pip gcc libc-dev libffi-dev strace nodejs
+
+RUN wget -nv -q -P /usr/bin 'http://www.vdberg.org/~richard/tcpping' \
+    && chmod a+rx /usr/bin/tcpping
+
+RUN python -m pip config --user set global.progress_bar off \
+    && python -m pip install --break-system-packages --no-cache-dir --quiet supervisor httpie /webssh
+
+RUN curl -o /gcsfuse.deb -L \
+    https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v${GCSFUSE_VERSION}/gcsfuse_${GCSFUSE_VERSION}_amd64.deb \
+    && dpkg -i --force-all /gcsfuse.deb && rm -vf /gcsfuse.deb
+
+RUN curl -sL -o yq https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 && chmod +x /yq
+
+RUN curl -sL -o gost.tar.gz \
+    https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_linux_amd64.tar.gz \
+    && tar -xzf gost.tar.gz && chmod +x gost && rm -vf gost.tar.gz
+
+# see: https://github.com/linuxserver/docker-openssh-server?tab=readme-ov-file#application-setup
+RUN if [[ -f /authorized_keys ]] ; then mkdir -p /config/.ssh/ \
+    && cat /authorized_keys >> /config/.ssh/authorized_keys \
+    && mkdir -p /wssh/secrets/1 \
+    && mkdir -p /wssh/secrets/2 \
+    && mkdir -p /wssh/secrets/3 \
+    && cat /authorized_keys > /wssh/secrets/1/authorized_keys \
+    ; fi
+
+RUN if [[ "${USER_NAME}" == "root" ]] ; then \
+    echo "root:${USER_PASSWORD}" | chpasswd \
+    && sed --in-place '/PermitRootLogin/d' /etc/ssh/sshd_config \
+    && sed --in-place '/AuthorizedKeysFile/d' /etc/ssh/sshd_config \
+    && sed --in-place '/AllowTcpForwarding/d' /etc/ssh/sshd_config \
+    && sed --in-place '/Banner/d' /etc/ssh/sshd_config \
+    && echo -e '\nPermitRootLogin yes' >> /etc/ssh/sshd_config \
+    && echo -e '\nAuthorizedKeysFile /wssh/secrets/1/authorized_keys' >> /etc/ssh/sshd_config \
+    && echo -e '\nAllowTcpForwarding yes' >> /etc/ssh/sshd_config \
+    && echo -e '\nBanner /cloud_run_ssh_banner' >> /etc/ssh/sshd_config \
+    ; fi
+
+RUN curl -sL -o docker.tgz \
+    https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz \
+    && tar -xzf docker.tgz && cp -vf docker/* /usr/bin/ && rm -rvf docker && rm -vf docker.tgz
+
+RUN curl -fsSL \
+    https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v${CREDS_HELPER_VERSION}/docker-credential-gcr_linux_amd64-${CREDS_HELPER_VERSION}.tar.gz \
+    | tar xz docker-credential-gcr && chmod +x docker-credential-gcr && mv docker-credential-gcr /usr/bin/
+
+WORKDIR /vscode
+
+RUN curl -sL -o vscode.tar.gz \
+    https://github.com/coder/code-server/releases/download/v${VSCODE_VERSION}/code-server-${VSCODE_VERSION}-linux-amd64.tar.gz \
+    && tar -xzf vscode.tar.gz --strip-components=1 && rm -vf vscode.tar.gz && rm -vf /vscode/lib/node && ln -s $(which node) /vscode/lib/node
+
+WORKDIR /
+
+RUN echo "${WEBSSH_PORT}" > /webssh.port \
+    && echo "${WEBAPP_PORT}" > /webapp.port \
+    && echo "${WEBDEV_PORT}" > /webdev.port \
+    && mkdir -pv /dl/ \
+    && chsh -s /bin/bash ${USER_NAME}
+
+CMD ["exec", "env", "/init_svc"]

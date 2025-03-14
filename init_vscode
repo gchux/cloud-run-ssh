@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+DEFAULT_WEBDEV_PORT=$(cat /webdev.port | tr -d '\n')
+export VSCODE_PORT="${WEBDEV_PORT:-$DEFAULT_WEBDEV_PORT}"
+
+echo "WEBDEV_PORT: ${VSCODE_PORT}"
+
+exec env /vscode/bin/code-server \
+  --auth=none \
+  --ignore-last-opened \
+  --disable-telemetry \
+  --disable-update-check \
+  --disable-workspace-trust \
+  --socket=/tmp/vscode.sock \
+  --abs-proxy-base-path="/dev/" \
+  --trusted-origins='*' \
+  --app-name='Cloud Run SSH server'
