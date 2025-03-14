@@ -33,11 +33,12 @@ ARG YQ_VERSION=4.45.1
 
 ENV USER_NAME=${SSH_USER}
 ENV USER_PASSWORD=${SSH_PASS}
-ENV HTTP_PORT=${WEB_PORT}
+ENV WEBSSH_PORT=${WEB_PORT}
 
 ENV PASSWORD_ACCESS=${PASSWORD_ACCESS}
 ENV SUDO_ACCESS=${SUDO_ACCESS}
 ENV LOG_STDOUT=true
+ENV SSH_PORT=2222
 
 ENV PUID=0
 ENV PGID=0
@@ -100,7 +101,7 @@ RUN if [[ "${USER_NAME}" == "root" ]] ; then \
     && echo -e '\nBanner /cloud_run_ssh_banner' >> /etc/ssh/sshd_config \
     ; fi
 
-RUN echo "${HTTP_PORT}" > /http.port && mkdir -pv /dl/ && chsh -s /bin/bash ${USER_NAME}
+RUN echo "${WEBSSH_PORT}" > /webssh.port && mkdir -pv /dl/ && chsh -s /bin/bash ${USER_NAME}
 
 EXPOSE ${HTTP_PORT}/tcp
 

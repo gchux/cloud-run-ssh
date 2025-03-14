@@ -1,5 +1,55 @@
 #!/usr/bin/with-contenv bash
 
+echo '>>> ENV BEFORE >>>'
+printenv
+echo '<<<'
+
+unset TZ
+unset PUID
+unset PGID
+unset HOME
+unset USER
+unset MAIL
+unset SHELL
+unset SHLVL
+unset LOGNAME
+
+unset PROJECT_ID
+unset PROJECT_NUM
+unset GCP_REGION
+unset INSTANCE_ID
+unset INSTANCE_UUID
+unset CLOUD_RUN_FQDN
+
+unset USER_NAME
+unset USER_PASSWORD
+unset SUDO_ACCESS
+unset PASSWORD_ACCESS
+unset LOG_STDOUT
+unset LSIO_FIRST_PARTY
+
+unset WEBSSH_PORT
+unset SSH_TTY
+unset SSH_PORT
+unset SSH_CLIENT
+unset SSH_CONNECTION
+unset SSH_AUTO_LOGIN
+unset SSH_SERVER_URL
+unset SSH_WEB_SERVER_PID
+unset SSH_PROXY_SERVER_POLL_PID
+unset ENABLE_SSH_PROXY
+
+unset VIRTUAL_ENV
+unset S6_VERBOSITY
+unset S6_STAGE2_HOOK
+unset S6_CMD_WAIT_FOR_SERVICES_MAXTIME
+
+DEFAULT_WEBAPP_PORT=$(cat /webapp.port | tr -d '\n')
+export PORT="${WEBAPP_PORT:-$DEFAULT_WEBAPP_PORT}"
+unset APP_PORT
+unset WEBAPP_PORT
+unset DEFAULT_WEBAPP_PORT
+
 mkdir -pv /app/{dev,etc,proc,tmp}
 
 mount --bind /dev /app/dev
@@ -8,6 +58,10 @@ mount --bind /proc /app/proc
 chmod 1777 /app/tmp
 
 echo 'nameserver 169.254.169.254' > /app/etc/resolv.conf
+
+echo '>>> ENV AFTER >>>'
+printenv
+echo '<<<'
 
 chroot /app/ sh /_
 
