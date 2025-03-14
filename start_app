@@ -1,0 +1,15 @@
+#!/usr/bin/with-contenv bash
+
+mkdir -pv /app/{dev,etc,proc,tmp}
+
+mount --bind /dev /app/dev
+mount --bind /proc /app/proc
+
+chmod 1777 /app/tmp
+
+echo 'nameserver 169.254.169.254' > /app/etc/resolv.conf
+
+chroot /app/ sh /_
+
+umount /app/proc
+umount /app/dev

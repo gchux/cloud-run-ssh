@@ -26,7 +26,37 @@ cat -n ${KEYS_DIR}/authorized_keys
 DOCKER_LOCAL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
 DOCKER_REMOTE_IMAGE="${IMAGE_URI_BASE}/${DOCKER_LOCAL_IMAGE}"
 
-docker buildx build --no-cache \
+if [ "${CONTENT_FLAVOR}" = "app" ]; then
+  APP_IMAGE_URI="${2}"
+  if [[ -z "${APP_IMAGE_URI}" ]]; then
+    echo "missing APP container image URI"
+    exit 1
+  fi
+
+  rm -rf ./tmp
+  mkdir -pv ./tmp/app
+  
+  docker create --name=app_container "${APP_IMAGE_URI}"
+  docker export --output='tmp/app/app_container.tar' app_container
+  cd tmp/app/ && tar -xf app_container.tar && rm app_container.tar
+  cd - && docker kill app_container && docker rm app_container
+
+  docker image inspect --format=json "${APP_IMAGE_URI}" \
+    | jq -M '.[0]' > ./tmp/app.json
+  docker image inspect --format=json "${APP_IMAGE_URI}" \
+    | jq -cMr '.[0].Config.Env[]' \
+    | xargs -I% echo -e 'export %' > ./tmp/start_app
+  docker image inspect --format=json "${APP_IMAGE_URI}" \
+    | jq -cMr '.[0].Config.WorkingDir' \
+    | xargs -I% echo -e '\ncd %' >> ./tmp/start_app
+  docker image inspect --format=json "${APP_IMAGE_URI}" \
+    | jq -cMr '.[0].Config | (.Entrypoint // .Cmd) | join(" ")' \
+    | xargs -I% echo -e '\n%' >> ./tmp/start_app
+  chmod +x ./tmp/start_app
+  cat -n ./tmp/start_app
+fi
+
+docker buildx build \
   --platform=linux/amd64 \
   --file=$(pwd)/Dockerfile.${IMAGE_TAG} \
   --tag=${DOCKER_LOCAL_IMAGE} \
@@ -37,6 +67,8 @@ docker buildx build --no-cache \
   --build-arg="ALLOYDB_PROXY_VERSION=${ALLOYDB_PROXY_VERSION}" \
   --build-arg="USQL_VERSION=${USQL_VERSION}" \
   --build-arg="GOST_VERSION=${GOST_VERSION}" \
+  --label="CONTENT_FLAVOR=v${CONTENT_FLAVOR}" \
+  --label="ACCESS_LEVEL=v${ACCESS_LEVEL}" \
   --label="SSH_SERVER_VERSION=v${SSH_SERVER_VERSION}" \
   --label="GCSFUSE_VERSION=v${GCSFUSE_VERSION}" \
   --label="CLOUDSDK_VERSION=v${CLOUDSDK_VERSION}" \
@@ -50,6 +82,10 @@ docker buildx build --no-cache \
   --build-arg="PASSWORD_ACCESS=${PASSWORD_ACCESS}" \
   --build-arg="SUDO_ACCESS=${SUDO_ACCESS}" \
   --progress=plain $(pwd)
+
+if [ "${CONTENT_FLAVOR}" = "app" ]; then
+  rm -rf ./tmp
+fi
 
 docker tag ${DOCKER_LOCAL_IMAGE} ${DOCKER_REMOTE_IMAGE}
 docker push ${DOCKER_REMOTE_IMAGE}

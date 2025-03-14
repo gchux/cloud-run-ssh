@@ -27,13 +27,18 @@ ARG SSH_PASS="pass"
 ARG PASSWORD_ACCESS="true"
 ARG SUDO_ACCESS="true"
 
+ARG X_WORKINGDIR="/"
+ARG X_ENTRYPOINT="sh"
+
 ARG GCSFUSE_VERSION=2.7.0
 ARG GOST_VERSION=3.0.0
 ARG YQ_VERSION=4.45.1
+ARG DOCKER_VERSION=28.0.1
+ARG CREDS_HELPER_VERSION=2.1.25
 
 ENV USER_NAME=${SSH_USER}
 ENV USER_PASSWORD=${SSH_PASS}
-ENV HTTP_PORT=${WEB_PORT}
+ENV WEBSSH_PORT=${WEB_PORT}
 
 ENV PASSWORD_ACCESS=${PASSWORD_ACCESS}
 ENV SUDO_ACCESS=${SUDO_ACCESS}
@@ -44,24 +49,25 @@ ENV PGID=0
 
 USER 0:0
 
-COPY ./init_svc ./init_wssh ./keys/authorized_keys* /
-COPY ./ssh.conf /svc.conf
 
+COPY ./init_svc ./init_nginx ./init_wssh ./init_dockerd ./keys/authorized_keys* /
+COPY ./app.conf /svc.conf
 COPY ./keys/*.pub /pubkeys/
 COPY ./ssh_proxy_client.yaml /ssh_proxy_client.yaml
 COPY ./poll_ssh_proxy_server /poll_ssh_proxy_server
 COPY ./cloud_run_ssh_banner /cloud_run_ssh_banner
 COPY ./webssh /webssh
+COPY ./app_nginx.conf /nginx.conf.template
 
 COPY ./scripts/gcurl /usr/local/bin/gcurl
 COPY ./scripts/gidcurl /usr/local/bin/gidcurl
 
 COPY ./catalogs/commands.json /webssh/webssh/static/json/commands.json
 
-RUN apk update && apk add --quiet --no-progress bash strace \
-    dpkg fuse vim busybox-extras net-tools bind-tools iproute2 \
+RUN apk update && apk add --quiet --no-progress nginx bash gettext fuse-overlayfs \
+    dpkg fuse vim busybox-extras net-tools bind-tools iproute2 iptables \
     openssl curl wget tmux git bc traceroute tcptraceroute tcpdump \
-    mtr nmap redis python3-dev py3-pip gcc libc-dev libffi-dev
+    mtr nmap redis python3-dev py3-pip gcc libc-dev libffi-dev strace
 
 RUN wget -nv -q -P /usr/bin 'http://www.vdberg.org/~richard/tcpping' \
     && chmod a+rx /usr/bin/tcpping
@@ -100,8 +106,19 @@ RUN if [[ "${USER_NAME}" == "root" ]] ; then \
     && echo -e '\nBanner /cloud_run_ssh_banner' >> /etc/ssh/sshd_config \
     ; fi
 
-RUN echo "${HTTP_PORT}" > /http.port && mkdir -pv /dl/ && chsh -s /bin/bash ${USER_NAME}
+RUN curl -sL -o docker.tgz \
+    https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz \
+    && tar -xzf docker.tgz && cp -vf docker/* /usr/bin/ && rm -rvf docker && rm -vf docker.tgz
 
-EXPOSE ${HTTP_PORT}/tcp
+RUN curl -fsSL \
+    https://github.com/GoogleCloudPlatform/docker-credential-gcr/releases/download/v${CREDS_HELPER_VERSION}/docker-credential-gcr_linux_amd64-${CREDS_HELPER_VERSION}.tar.gz \
+    | tar xz docker-credential-gcr && chmod +x docker-credential-gcr && mv docker-credential-gcr /usr/bin/
+
+RUN echo "${WEBSSH_PORT}" > /http.port && mkdir -pv /dl/ && chsh -s /bin/bash ${USER_NAME}
+
+COPY ./tmp/app /app
+COPY ./tmp/app.json /app/.app.json
+COPY ./tmp/start_app /app/_
+COPY ./start_app /start_app
 
 CMD ["exec", "env", "/init_svc"]
