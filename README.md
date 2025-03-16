@@ -25,10 +25,10 @@ The **`Cloud Run SSH server`** aims to provide full linux shell running in a Clo
 
 - [docker-openssh-server](https://github.com/linuxserver/docker-openssh-server): provides the SSH server.
 - [webssh](https://pypi.org/project/webssh/): provides web access to the SSH server and a browser based shell to execute commands.
-- [Supervisor](https://supervisord.org/): provider process control and orchestration.
+- [Supervisor](https://supervisord.org/): provides process control and orchestration.
 - [Nginx](https://nginx.org/): provides the HTTP proxy for `dev` and `app` flavors.
-- [Docker](https://www.docker.com/): provider containers execution engine.
-- [Code Server](https://github.com/coder/code-server): provider the web based Visual Studio Code editor.
+- [Docker](https://www.docker.com/): provides containers execution engine.
+- [Code Server](https://github.com/coder/code-server): provides the web based Visual Studio Code editor.
 
 ## Image flavors
 
