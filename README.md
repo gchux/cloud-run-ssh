@@ -185,7 +185,8 @@ gcloud run deploy ${SERVICE_NAME} \
    --no-allow-unauthenticated
 ```
 
-> [!CAUTION] > **It is strongly recommended to use `--no-allow-unauthenticated`** in order to **prevent unauthorized access to the SSH server**.
+> [!CAUTION]
+> It is **strongly recommended to use `--no-allow-unauthenticated`** in order to **prevent unauthorized access to the SSH server**.
 
 > [!IMPORTANT]
 > If `gen1` is needed, then both `ACCESS_LEVEL`, `SSH_USER`/`USER_NAME` must be set to `root`.
@@ -219,7 +220,8 @@ gcloud run deploy ${SERVICE_NAME} \
 
 - Use `SSH_AUTO_LOGIN=true` if you want to allow users to be automatically logged in and go straight to the `SHELL`.
 
-> [!NOTE] > `SSH_AUTO_LOGIN=true` requires `PASSWORD_ACCESS=true`, and `SUDO_ACCESS=true` if the intended user is `root`.
+> [!IMPORTANT]
+> The option `SSH_AUTO_LOGIN=true` requires `PASSWORD_ACCESS=true`, and `SUDO_ACCESS=true` if the intended user is `root`.
 
 - At container execution time, it is possible to override the following parameters:
 
