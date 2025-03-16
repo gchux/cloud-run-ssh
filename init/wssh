@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
-export DEFAULT_WEBSSH_PORT=$(cat /webssh.port | tr -d '\n')
-export SSH_HTTP_PORT=${WEBSSH_PORT:-$DEFAULT_WEBSSH_PORT}
+export USER_NAME="${USER_NAME:-$SSH_USER_NAME}"
+
+export DEFAULT_WEBSSH_PORT="$(cat /webssh.port | tr -d '\n')"
+export SSH_HTTP_PORT="${WEBSSH_PORT:-$DEFAULT_WEBSSH_PORT}"
 
 MDS_URL='http://metadata.google.internal/computeMetadata/v1'
 MDS_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}"
@@ -21,6 +23,7 @@ echo "REVISION: ${K_REVISION}" >> /cloud_run_ssh_banner
 echo "INSTANCE: ${INSTANCE_ID}" >> /cloud_run_ssh_banner
 echo "TUNNEL:   ${INSTANCE_UUID}" >> /cloud_run_ssh_banner
 echo -e '\n' >> /cloud_run_ssh_banner
+cat /cloud_run_ssh_banner > /etc/motd
 
 SSH_PROXY_SERVER_ENABLED=${ENABLE_SSH_PROXY:-false}
 if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then

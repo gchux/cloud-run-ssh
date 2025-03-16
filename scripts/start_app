@@ -32,6 +32,7 @@ unset WEBSSH_PORT
 unset SSH_TTY
 unset SSH_PORT
 unset SSH_CLIENT
+unset SSH_USER_NAME
 unset SSH_CONNECTION
 unset SSH_AUTO_LOGIN
 unset SSH_SERVER_URL

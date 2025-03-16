@@ -1,0 +1,39 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+
+sed -i '/PermitRootLogin/d' /config/sshd/sshd_config
+sed -i '/AuthorizedKeysFile/d' /config/sshd/sshd_config
+sed -i '/AllowTcpForwarding/d' /config/sshd/sshd_config
+sed -i '/Banner/d' /config/sshd/sshd_config
+
+perl -pi -e 's/^#?(ListenAddress) 0\.0\.0\.0/$1 127.0.0.1/g' /config/sshd/sshd_config
+perl -pi -e 's/^#?(X11Forwarding) (?:yes|no)/$1 no/g' /config/sshd/sshd_config
+perl -pi -e 's/^#?(TCPKeepAlive) (?:yes|no)/$1 yes/g' /config/sshd/sshd_config
+
+# perl -pi -e 's/^#?(PasswordAuthentication) (?:yes|no)/$1 yes/g' /etc/ssh/sshd_config
+
+echo -e '\n# Cloud Run SSH server' >> /config/sshd/sshd_config
+
+if [[ "${SSH_USER_NAME}" == "root" ]]; then
+    echo 'PermitRootLogin yes' >> /config/sshd/sshd_config
+fi
+
+echo 'AuthorizedKeysFile /wssh/secrets/1/authorized_keys' >> /config/sshd/sshd_config
+echo 'AllowTcpForwarding yes' >> /config/sshd/sshd_config
+echo 'Banner /cloud_run_ssh_banner' >> /config/sshd/sshd_config
+
+if [[ -f /authorized_keys ]]; then
+    mkdir -p /config/.ssh/
+    cat /authorized_keys >> /config/.ssh/authorized_keys
+    mkdir -p /wssh/secrets/1
+    mkdir -p /wssh/secrets/2
+    mkdir -p /wssh/secrets/3
+    cat /authorized_keys > /wssh/secrets/1/authorized_keys
+fi
+
+mkdir -pv /run/sshd
+chmod 0755 /run/sshd
+
+chmod -x /etc/update-motd.d/*
+
+ln -s /usr/sbin/sshd /usr/sbin/sshd.pam

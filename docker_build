@@ -69,6 +69,7 @@ docker buildx build \
   --build-arg="GOST_VERSION=${GOST_VERSION}" \
   --build-arg="YQ_VERSION=${YQ_VERSION}" \
   --build-arg="DOCKER_VERSION=${DOCKER_VERSION}" \
+  --build-arg="GCREDS_HELPER_VERSION=${GCREDS_HELPER_VERSION}" \
   --build-arg="VSCODE_VERSION=${VSCODE_VERSION}" \
   --label="CONTENT_FLAVOR=v${CONTENT_FLAVOR}" \
   --label="ACCESS_LEVEL=v${ACCESS_LEVEL}" \
@@ -80,8 +81,6 @@ docker buildx build \
   --label="USQL_VERSION=v${USQL_VERSION}" \
   --label="GOST_VERSION=${GOST_VERSION}" \
   --label="YQ_VERSION=${YQ_VERSION}" \
-  --label="DOCKER_VERSION=${DOCKER_VERSION}" \
-  --label="VSCODE_VERSION=${VSCODE_VERSION}" \
   --build-arg="SSH_USER=${SSH_USER}" \
   --build-arg="SSH_PASS=${SSH_PASS}" \
   --build-arg="WEB_PORT=${WEB_PORT}" \
