@@ -13,7 +13,7 @@ The **`Cloud Run SSH server`** aims to provide full linux shell running in a Clo
 - SSH server for Cloud Run gen1 and gen2.
 - Get a text transcript of the SSH session.
 - Download files from the SSH server filesystem.
-- Execute commands from the UI using a catalaog with 2 clicks.
+- Execute commands from the UI using a catalog with 2 clicks.
 - Automatically log into the SSH server using [Cloud Run proxy](https://cloud.google.com/sdk/gcloud/reference/run/services/proxy).
 - Run [Docker](https://docs.docker.com/engine/) containers on top of Cloud Run gen2.
 
@@ -30,6 +30,8 @@ The **`Cloud Run SSH server`** aims to provide full linux shell running in a Clo
 
 - `lite`: contains the bare minimum tools to perform network troubleshooting.
 - `full`: contains additional Google Cloud SDK and third-party tools.
+- `dev`: contains Google Cloud SDK, [Docker](https://www.docker.com/) and [Visual Studio Code](https://code.visualstudio.com/).
+- `app`: same as `lite`, includes [Docker](https://www.docker.com/) and allows to import a container image into the Cloud Run SSH server filesystem.
 
 > [!TIP]
 > choose `lite` if all you need to do is network troubleshooting; build-time and size will be reduced.
