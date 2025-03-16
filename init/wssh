@@ -5,6 +5,8 @@ export USER_NAME="${USER_NAME:-$SSH_USER_NAME}"
 export DEFAULT_WEBSSH_PORT="$(cat /webssh.port | tr -d '\n')"
 export SSH_HTTP_PORT="${WEBSSH_PORT:-$DEFAULT_WEBSSH_PORT}"
 
+echo "WEBSSH_PORT: ${WEBSSH_PORT}"
+
 MDS_URL='http://metadata.google.internal/computeMetadata/v1'
 MDS_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}"
 

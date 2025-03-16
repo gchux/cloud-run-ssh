@@ -14,4 +14,5 @@ exec env /vscode/bin/code-server \
   --socket=/tmp/vscode.sock \
   --abs-proxy-base-path="/dev/" \
   --trusted-origins='*' \
+  --user-data-dir=/.vscode \
   --app-name='Cloud Run SSH server'

@@ -61,6 +61,8 @@ COPY ./webssh /webssh
 COPY ./init/svc ./init/nginx ./init/wssh ./init/dockerd ./init/vscode /bin/init/
 COPY ./conf/dev.conf /svc.conf
 COPY ./nginx/dev.conf /nginx.conf.template
+COPY ./.vscode /.vscode
+
 COPY ./keys/*.pub /pubkeys/
 COPY ./cloud_run_ssh_banner ./keys/authorized_keys* /
 
