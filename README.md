@@ -154,8 +154,14 @@ docker tag ghcr.io/gchux/cloud-run-ssh:latest ${IMAGE_URI_FULL}
 docker push ${IMAGE_URI_FULL}
 ```
 
+Choose from one of the following pre-built image flavors:
+
+- ghcr.io/gchux/cloud-run-ssh:lite-root
+- ghcr.io/gchux/cloud-run-ssh:full-root
+- ghcr.io/gchux/cloud-run-ssh:dev-root
+
 > [!NOTE]
-> Docker image tag `latest` points to `CONTENT_FLAVOR=lite` and `ACCESS_LEVEL=no-root`
+> Docker image tag `latest` points to `CONTENT_FLAVOR=lite` and `ACCESS_LEVEL=root`
 
 ## Deploying the image to Cloud Run
 
