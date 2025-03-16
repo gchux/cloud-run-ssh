@@ -19,10 +19,16 @@ The **`Cloud Run SSH server`** aims to provide full linux shell running in a Clo
 
 ![cloud_run_ssh_ui](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_ui.png?raw=true)
 
+![cloud_run_ssh_vscode](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_vscode.png?raw=true)
+
 ## Building Blocks:
 
 - [docker-openssh-server](https://github.com/linuxserver/docker-openssh-server): provides the SSH server.
 - [webssh](https://pypi.org/project/webssh/): provides web access to the SSH server and a browser based shell to execute commands.
+- [Supervisor](https://supervisord.org/): provider process control and orchestration.
+- [Nginx](https://nginx.org/): provides the HTTP proxy for `dev` and `app` flavors.
+- [Docker](https://www.docker.com/): provider containers execution engine.
+- [Code Server](https://github.com/coder/code-server): provider the web based Visual Studio Code editor.
 
 ## Image flavors
 
@@ -34,7 +40,10 @@ The **`Cloud Run SSH server`** aims to provide full linux shell running in a Clo
 - `app`: same as `lite`, includes [Docker](https://www.docker.com/) and allows to import a container image into the Cloud Run SSH server filesystem.
 
 > [!TIP]
-> choose `lite` if all you need to do is network troubleshooting; build-time and size will be reduced.
+> Choose `lite` if all you need to do is network troubleshooting; build-time and size will be reduced.
+
+> [!NOTE]
+> The `app` and `dev` flavors are only supported under Cloud Run gen2 environment.
 
 ### By access level
 
