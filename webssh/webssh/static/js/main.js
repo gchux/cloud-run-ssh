@@ -427,6 +427,7 @@ jQuery(function ($) {
     const $transcriptButton = $toolbar.find("#transcriptButton");
     const $cloudRunButton = $toolbar.find("#cloudRunButton");
     const $downloadButton = $toolbar.find("#downloadButton");
+    const $editorButton = $toolbar.find("#editorButton");
 
     const $buttons = $toolbar.add($cloudRunButton).add($downloadButton)
       .add($transcriptButton).add($commandsButton).add($disconnectButton);
@@ -640,6 +641,15 @@ jQuery(function ($) {
           const { $downloadFile } = this;
           $downloadFile.val("");
         }, { $downloadFile }));
+
+    $editorButton.on("click", {
+      ssh_server: window.ssh_server,
+    }, function(e) {
+      const { ssh_server } = e.data;
+      if (_.eq(ssh_server.flavor, "dev")) {
+        window.open("/dev/", "_blank");
+      }
+    });
 
     const onCatalogsLoaded = function (commands) {
       htmlTemplate = Handlebars.compile(commandCatalogEntryTemplate);

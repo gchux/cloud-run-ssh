@@ -38,6 +38,7 @@ ENV_SSH_PORT = os.environ.get("SSH_PORT", "2222")
 ENV_SSH_USER = os.environ.get("USER_NAME")
 ENV_SSH_PASS = os.environ.get("USER_PASSWORD")
 ENV_SSH_AUTO_LOGIN = os.environ.get("SSH_AUTO_LOGIN", "false")
+ENV_SSH_CONTENT_FLAVOR = os.environ.get("SSH_CONTENT_FLAVOR", "undefined")
 
 ENV_PROJECT_ID = os.environ.get("PROJECT_ID")
 ENV_K_SERVICE = os.environ.get("K_SERVICE")
@@ -514,6 +515,7 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
             k_revision="" if ENV_K_REVISION is None else ENV_K_REVISION,
             instance_id="" if ENV_INSTANCE_ID is None else ENV_INSTANCE_ID,
             auto_login=ENV_SSH_AUTO_LOGIN.lower() in ["true", "yes"],
+            content_flavor="undefined" if ENV_SSH_CONTENT_FLAVOR is None else ENV_SSH_CONTENT_FLAVOR,
         )
 
     @tornado.gen.coroutine

@@ -1,64 +1,8 @@
 #!/usr/bin/env bash
 
-export USER_NAME="${USER_NAME:-$SSH_USER_NAME}"
+source /cloud_run_ssh.env
 
-export DEFAULT_WEBSSH_PORT="$(cat /webssh.port | tr -d '\n')"
-export SSH_HTTP_PORT="${WEBSSH_PORT:-$DEFAULT_WEBSSH_PORT}"
-
-echo "WEBSSH_PORT: ${WEBSSH_PORT}"
-
-MDS_URL='http://metadata.google.internal/computeMetadata/v1'
-MDS_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}"
-
-export PROJECT_ID=$(${MDS_CURL}/project/project-id)
-export PROJECT_NUM=$(${MDS_CURL}/project/numeric-project-id)
-_GCP_REGION=$(${MDS_CURL}/instance/region)
-export GCP_REGION=${_GCP_REGION##*/}
-export INSTANCE_ID=$(${MDS_CURL}/instance/id)
-export INSTANCE_UUID="$(cat /proc/sys/kernel/random/uuid | tr -d '\n')"
-export CLOUD_RUN_FQDN="${K_SERVICE}-${PROJECT_NUM}.${GCP_REGION}.run.app"
-
-echo "PROJECT:  ${PROJECT_ID}" >> /cloud_run_ssh_banner
-echo "REGION:   ${GCP_REGION}" >> /cloud_run_ssh_banner
-echo "SERVICE:  ${K_SERVICE}" >> /cloud_run_ssh_banner
-echo "REVISION: ${K_REVISION}" >> /cloud_run_ssh_banner
-echo "INSTANCE: ${INSTANCE_ID}" >> /cloud_run_ssh_banner
-echo "TUNNEL:   ${INSTANCE_UUID}" >> /cloud_run_ssh_banner
-echo -e '\n' >> /cloud_run_ssh_banner
-cat /cloud_run_ssh_banner > /etc/motd
-
-SSH_PROXY_SERVER_ENABLED=${ENABLE_SSH_PROXY:-false}
 if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
-
-  echo "export PROJECT_ID=${PROJECT_ID}" > /ssh_proxy_client.env
-  echo "export GCP_REGION=${GCP_REGION}" > /ssh_proxy_client.env
-  echo "export K_SERVICE=${K_SERVICE}" >> /ssh_proxy_client.env
-  echo "export K_REVISION=${K_REVISION}" >> /ssh_proxy_client.env
-  echo "export INSTANCE_ID=${INSTANCE_ID}" >> /ssh_proxy_client.env
-
-  echo "export SSH_PROXY_CLIENT_ID=${INSTANCE_UUID}" >> /ssh_proxy_client.env
-
-  echo "export SSH_PROXY_SERVER_ID=${SSH_PROXY_SERVER_ID:-00000000-0000-0000-0000-000000000000}" >> /ssh_proxy_client.env
-
-  echo "export SSH_PROXY_SERVER_HOST=${SSH_PROXY_SERVER_HOST}" >> /ssh_proxy_client.env
-  echo "export SSH_PROXY_SERVER_API_PORT=${SSH_PROXY_SERVER_API_PORT:-5000}" >> /ssh_proxy_client.env
-  echo "export SSH_PROXY_SERVER_TUNNEL_PORT=${SSH_PROXY_SERVER_TUNNEL_PORT:-5555}" >> /ssh_proxy_client.env
-
-  sed -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID}|g" \
-    -e "s|%SSH_PROXY_CLIENT_ID%|${INSTANCE_UUID}|g" \
-    -e "s|%SSH_PROXY_SERVER_HOST%|${SSH_PROXY_SERVER_HOST}|g" \
-    -e "s|%SSH_PROXY_SERVER_API_PORT%|${SSH_PROXY_SERVER_API_PORT:-5000}|g" \
-    -e "s|%SSH_PROXY_SERVER_TUNNEL_PORT%|${SSH_PROXY_SERVER_TUNNEL_PORT:-5555}|g" \
-    -e "s|%PROJECT_ID%|${PROJECT_ID}|g" \
-    -e "s|%PROJECT_NUM%|${PROJECT_NUM}|g" \
-    -e "s|%GCP_REGION%|${GCP_REGION}|g" \
-    -e "s|%K_SERVICE%|${K_SERVICE}|g" \
-    -e "s|%K_REVISION%|${K_REVISION}|g" \
-    -e "s|%INSTANCE_ID%|${INSTANCE_ID}|g" \
-    -e "s|%APP_HTTP_PORT%|${APP_HTTP_PORT:-8080}|g" \
-    -e "s|%SSH_HTTP_PORT%|${SSH_HTTP_PORT}|g" \
-    /ssh_proxy_client.yaml > /tmp/ssh_proxy_client.yaml
-
   # start tunnel with SSH Proxy Server
   /gost -D -C /tmp/ssh_proxy_client.yaml 2>&1 &
   export SSH_PROXY_CLIENT_PID=$!
@@ -69,19 +13,16 @@ if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
   export SSH_PROXY_SERVER_POLL_PID=$!
 fi
 
-SSH_SERVER_STATIC_PARAMS="hostname=localhost&port=2222&term=xterm-256color"
-
-# add `password` query paramenter to allow going straight to SHELL
 export USER_PASSWORD_B64=`printf "${USER_PASSWORD}" | basenc --base64url | tr -d '\n'`
 
-export SSH_SERVER_URL="https://${CLOUD_RUN_FQDN}"
+SSH_SERVER_STATIC_PARAMS="hostname=localhost&port=2222&term=xterm-256color"
 SSH_SERVER_TITLE="${PROJECT_ID}_${GCP_REGION}_${K_SERVICE}_${K_REVISION}"
 SSH_SERVER_PARAMS="${SSH_SERVER_STATIC_PARAMS}&username=${USER_NAME}&title=${SSH_SERVER_TITLE}&password=${USER_PASSWORD_B64}"
 
 echo "[SSH Server] - credentials: [user:${USER_NAME}][pass:${USER_PASSWORD}]"
 echo "[SSH Server] - Cloud Run URL: ${SSH_SERVER_URL}?${SSH_SERVER_PARAMS}"
-echo "[SSH Server] - Cloud Run `gcloud` proxy command: gcloud run services proxy ${K_SERVICE} --region=${GCP_REGION} --port=${SSH_HTTP_PORT}"
-echo "[SSH Server] - Cloud Run proxied URL: http://localhost:${SSH_HTTP_PORT}?${SSH_SERVER_PARAMS}"
+echo "[SSH Server] - Cloud Run proxy command: gcloud run services proxy ${K_SERVICE} --region=${GCP_REGION} --port=${WEBSSH_PORT}"
+echo "[SSH Server] - Cloud Run proxied URL: http://localhost:${WEBSSH_PORT}?${SSH_SERVER_PARAMS}"
 
 echo "[SSH Server] - project/region/service/revision/instnace/tunnel: ${PROJECT_ID} / ${GCP_REGION} / ${K_SERVICE} / ${K_REVISION} / ${INSTANCE_ID} / ${INSTANCE_UUID}"
 
@@ -89,7 +30,7 @@ ssh-keyscan -p 2222 127.0.0.1 2>/dev/null
 
 trap 'kill -TERM $SSH_WEB_SERVER_PID' TERM INT
 # web ssh terminal: https://github.com/huashengdun/webssh
-wssh --address='0.0.0.0' --port=${SSH_HTTP_PORT} \
+wssh --address='0.0.0.0' --port=${WEBSSH_PORT} \
   --encoding='utf-8' --xheaders=True --debug=True \
   --origin='*' --policy=autoadd --log_to_stderr \
   --logging=debug --redirect=False --fbidhttp=False \

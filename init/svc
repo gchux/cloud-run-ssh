@@ -1,3 +1,17 @@
 #!/usr/bin/with-contenv bash
 
-exec env supervisord --configuration=/svc.conf
+source /cloud_run_ssh.env
+
+printenv
+
+trap 'kill -TERM $SUPERVISOR_PID' TERM INT
+supervisord --configuration=/svc.conf &
+export SUPERVISOR_PID=$!
+echo "[INFO] – Supervisor started w/PID: ${SUPERVISOR_PID}"
+wait ${SUPERVISOR_PID}
+trap - TERM INT
+wait ${SUPERVISOR_PID}
+echo "[INFO] – Supervisor ( PID: ${SUPERVISOR_PID} ) exited"
+
+# https://github.com/just-containers/s6-overlay?tab=readme-ov-file#writing-a-service-script
+/run/s6/basedir/bin/halt

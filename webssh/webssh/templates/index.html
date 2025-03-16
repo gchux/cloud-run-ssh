@@ -56,6 +56,7 @@
           host: "{{ ssh_host }}",
           port: "{{ ssh_port }}",
           debug: true,
+          flavor: "{{ content_flavor }}",
         };
 
         {% if auto_login %}
@@ -73,6 +74,7 @@
     <div id="waiter" style="display: none">Connecting ...</div>
 
     <div class="container form-container" style="display: none">
+      <!-- SSH login form -->
       <form id="connect" action="" method="post" enctype="multipart/form-data">
         <div class="row">
           <div class="col">
@@ -171,6 +173,7 @@
       </form>
     </div>
 
+    <!-- Cloud Run SSH server instance details -->
     <div class="container">
       <div id="status" style="color: red">
         {% if not auto_login %}
@@ -197,54 +200,74 @@
         </div>
         {% end %}
       </div>
-      <div
-        id="toolbar"
+
+      <!-- TOOLBAR dropdown defitnition -->
+      <div id="toolbar"
         class="container position-fixed top-0 end-0 mt-0 me-2 invisible"
-        style="z-index: 300"
-      >
-        <span
-          id="cloudRunButton"
-          class="btn btn-outline-warning btn-sm d-inline float-end invisible ms-2"
-          data-bs-toggle="modal"
-          data-bs-target="#cloudRunModal"
-        >
-          Cloud Run
-        </span>
-        <span
-          id="commandsButton"
-          class="btn btn-outline-success btn-sm d-inline float-end invisible ms-2"
-          data-bs-toggle="offcanvas"
-          data-bs-target="#offcanvas"
-          aria-controls="offcanvas"
-        >
-          Commands
-        </span>
-        <span
-          id="transcriptButton"
-          class="btn btn-outline-light btn-sm d-inline float-end invisible ms-2"
-          data-bs-toggle="modal"
-          data-bs-target="#transcriptModal"
-        >
-          Transcript
-        </span>
-        <span
-          id="downloadButton"
-          class="btn btn-outline-info btn-sm d-inline float-end invisible ms-2"
-          data-bs-toggle="modal"
-          data-bs-target="#downloadModal"
-        >
-          Download
-        </span>
-        <span
-          id="disconnectButton"
-          class="btn btn-outline-danger btn-sm d-inline float-end invisible ms-2"
-        >
-          Disconnect
-        </span>
+        style="z-index: 300">
+        <div class="btn-group d-inline float-end">
+          <button id="cloudRunButton"
+            type="button"
+            class="btn btn-sm btn-outline-warning"
+            data-bs-toggle="modal"
+            data-bs-target="#cloudRunModal"
+            >
+            Cloud Run
+          </button>
+          <button type="button"
+            class="btn btn-sm btn-warning dropdown-toggle dropdown-toggle-split"
+            data-bs-toggle="dropdown"
+            aria-expanded="true">
+            <span class="visually-hidden">options</span>
+          </button>
+          <ul class="dropdown-menu" data-popper-placement="bottom-end" data-bs-theme="dark">
+            <li>
+              <a id="commandsButton"
+                class="dropdown-item"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#offcanvas"
+                aria-controls="offcanvas"
+                href="#"
+                >
+                Commands
+              </a>
+            </li>
+            <li>
+              <a id="transcriptButton"
+                class="dropdown-item"
+                data-bs-toggle="modal"
+                data-bs-target="#transcriptModal"
+                href="#"
+                >
+                Transcript
+              </a>
+            </li>
+            <li>
+              <a id="downloadButton"
+                class="dropdown-item"
+                data-bs-toggle="modal"
+                data-bs-target="#downloadModal"
+                href="#"
+                >
+                Download
+              </a>
+            </li>
+            {% if content_flavor == "dev" %}
+            <li>
+              <a id="editorButton" class="dropdown-item" href="#">Editor</a>
+            </li>
+            {% end %}
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a id="disconnectButton" class="dropdown-item" href="#">Disconnect</a>
+            </li>
+          </ul>
+        </div>
       </div>
       <div id="terminal"></div>
     </div>
 
+    <!-- TRANSCRIPT modal definition -->
     <div
       class="modal fade text-dark-emphasis"
       id="transcriptModal"
@@ -299,6 +322,7 @@
       </div>
     </div>
 
+    <!-- DOWNLOAD modal definition -->
     <div
       class="modal fade text-dark-emphasis"
       id="downloadModal"
@@ -347,6 +371,7 @@
       </div>
     </div>
 
+    <!-- CLOUD RUN modal definition -->
     <div
       class="modal fade text-dark-emphasis"
       id="cloudRunModal"
@@ -413,6 +438,7 @@
       </div>
     </div>
 
+    <!-- COMMAND CONFIG modal definition -->
     <div
       class="modal fade text-dark-emphasis"
       id="commandConfigModal"
@@ -457,6 +483,7 @@
       </div>
     </div>
 
+    <!-- COMMANDS CATALOG offcanvas definition -->
     <div
       id="offcanvas"
       class="offcanvas offcanvas-bottom text-dark-emphasis"
@@ -482,6 +509,7 @@
       </div>
     </div>
 
+    <!-- JS dependencies -->
     <script src="static/js/jquery-3.7.1.min.js"></script>
     <script src="static/js/popper-2.11.8.min.js"></script>
     <script src="static/js/bootstrap-5.3.3.min.js"></script>

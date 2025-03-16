@@ -60,6 +60,7 @@ docker buildx build \
   --platform=linux/amd64 \
   --file=$(pwd)/Dockerfile.${IMAGE_TAG} \
   --tag=${DOCKER_LOCAL_IMAGE} \
+  --build-arg="CONTENT_FLAVOR=${CONTENT_FLAVOR}" \
   --build-arg="SSH_SERVER_VERSION=${SSH_SERVER_VERSION}" \
   --build-arg="GCSFUSE_VERSION=${GCSFUSE_VERSION}" \
   --build-arg="CLOUDSDK_VERSION=${CLOUDSDK_VERSION}" \

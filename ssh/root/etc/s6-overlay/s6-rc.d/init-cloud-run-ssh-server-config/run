@@ -1,6 +1,81 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
 
+MDS_URL='http://metadata.google.internal/computeMetadata/v1'
+MDS_CURL="curl -s -H Metadata-Flavor:Google ${MDS_URL}"
+
+export PROJECT_ID=$(${MDS_CURL}/project/project-id)
+export PROJECT_NUM=$(${MDS_CURL}/project/numeric-project-id)
+
+X_GCP_REGION=$(${MDS_CURL}/instance/region)
+export GCP_REGION=${X_GCP_REGION##*/}
+
+export INSTANCE_ID=$(${MDS_CURL}/instance/id)
+
+UUID=$(openssl rand -hex 16)
+export INSTANCE_UUID="${UUID:0:8}-${UUID:8:4}-${UUID:12:4}-${UUID:16:4}-${UUID:20:12}"
+
+echo "export PROJECT_ID=${PROJECT_ID}" > /cloud_run_ssh.env
+echo "export PROJECT_NUM=${PROJECT_NUM}" >> /cloud_run_ssh.env
+echo "export GCP_REGION=${GCP_REGION}" >> /cloud_run_ssh.env
+echo "export K_SERVICE=${K_SERVICE}" >> /cloud_run_ssh.env
+echo "export K_REVISION=${K_REVISION}" >> /cloud_run_ssh.env
+echo "export INSTANCE_ID=${INSTANCE_ID}" >> /cloud_run_ssh.env
+echo "export INSTANCE_UUID=${INSTANCE_UUID}" >> /cloud_run_ssh.env
+
+CLOUD_RUN_FQDN="${K_SERVICE}-${PROJECT_NUM}.${GCP_REGION}.run.app"
+echo "export CLOUD_RUN_FQDN='${CLOUD_RUN_FQDN}'" >> /cloud_run_ssh.env
+echo "export SSH_SERVER_URL='https://${CLOUD_RUN_FQDN}'" >> /cloud_run_ssh.env
+
+export USER_NAME="${USER_NAME:-$SSH_USER_NAME}"
+echo "export USER_NAME=${USER_NAME}" >> /cloud_run_ssh.env
+echo "export SSH_USER_NAME=${USER_NAME}" >> /cloud_run_ssh.env
+
+DEFAULT_WEBSSH_PORT="$(cat /webssh.port | tr -d '\n')"
+export WEBSSH_PORT="${WEBSSH_PORT:-$DEFAULT_WEBSSH_PORT}"
+echo "export WEBSSH_PORT=${WEBSSH_PORT}" >> /cloud_run_ssh.env
+
+SSH_CONTENT_FLAVOR="${CONTENT_FLAVOR:-$SSH_CONTENT_FLAVOR}"
+echo "export SSH_CONTENT_FLAVOR=${SSH_CONTENT_FLAVOR:-undefined}" >> /cloud_run_ssh.env
+
+export SSH_PROXY_SERVER_ENABLED=${ENABLE_SSH_PROXY:-false}
+if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
+  echo "export SSH_PROXY_CLIENT_ID=${INSTANCE_UUID}" >> /cloud_run_ssh.env
+  echo "export SSH_PROXY_SERVER_ID=${SSH_PROXY_SERVER_ID:-00000000-0000-0000-0000-000000000000}" >> /cloud_run_ssh.env
+  echo "export SSH_PROXY_SERVER_HOST=${SSH_PROXY_SERVER_HOST}" >> /cloud_run_ssh.env
+  echo "export SSH_PROXY_SERVER_API_PORT=${SSH_PROXY_SERVER_API_PORT:-5000}" >> /cloud_run_ssh.env
+  echo "export SSH_PROXY_SERVER_TUNNEL_PORT=${SSH_PROXY_SERVER_TUNNEL_PORT:-5555}" >> /cloud_run_ssh.env
+
+  sed -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID}|g" \
+    -e "s|%SSH_PROXY_CLIENT_ID%|${INSTANCE_UUID}|g" \
+    -e "s|%SSH_PROXY_SERVER_HOST%|${SSH_PROXY_SERVER_HOST}|g" \
+    -e "s|%SSH_PROXY_SERVER_API_PORT%|${SSH_PROXY_SERVER_API_PORT:-5000}|g" \
+    -e "s|%SSH_PROXY_SERVER_TUNNEL_PORT%|${SSH_PROXY_SERVER_TUNNEL_PORT:-5555}|g" \
+    -e "s|%PROJECT_ID%|${PROJECT_ID}|g" \
+    -e "s|%PROJECT_NUM%|${PROJECT_NUM}|g" \
+    -e "s|%GCP_REGION%|${GCP_REGION}|g" \
+    -e "s|%K_SERVICE%|${K_SERVICE}|g" \
+    -e "s|%K_REVISION%|${K_REVISION}|g" \
+    -e "s|%INSTANCE_ID%|${INSTANCE_ID}|g" \
+    -e "s|%APP_HTTP_PORT%|${WEBAPP_PORT:-8080}|g" \
+    -e "s|%SSH_HTTP_PORT%|${WEBSSH_PORT}|g" \
+    /ssh_proxy_client.yaml > /tmp/ssh_proxy_client.yaml
+fi
+echo "export SSH_PROXY_SERVER_ENABLED=${SSH_PROXY_SERVER_ENABLED}" >> /cloud_run_ssh.env
+
+################################################################################
+
+echo "PROJECT:  ${PROJECT_ID}" >> /cloud_run_ssh_banner
+echo "REGION:   ${GCP_REGION}" >> /cloud_run_ssh_banner
+echo "SERVICE:  ${K_SERVICE}" >> /cloud_run_ssh_banner
+echo "REVISION: ${K_REVISION}" >> /cloud_run_ssh_banner
+echo "INSTANCE: ${INSTANCE_ID}" >> /cloud_run_ssh_banner
+echo "TUNNEL:   ${INSTANCE_UUID}" >> /cloud_run_ssh_banner
+echo -e '\n' >> /cloud_run_ssh_banner
+cat /cloud_run_ssh_banner > /etc/motd
+
+###############################################################################
+
 sed -i '/PermitRootLogin/d' /config/sshd/sshd_config
 sed -i '/AuthorizedKeysFile/d' /config/sshd/sshd_config
 sed -i '/AllowTcpForwarding/d' /config/sshd/sshd_config
@@ -9,12 +84,13 @@ sed -i '/Banner/d' /config/sshd/sshd_config
 perl -pi -e 's/^#?(ListenAddress) 0\.0\.0\.0/$1 127.0.0.1/g' /config/sshd/sshd_config
 perl -pi -e 's/^#?(X11Forwarding) (?:yes|no)/$1 no/g' /config/sshd/sshd_config
 perl -pi -e 's/^#?(TCPKeepAlive) (?:yes|no)/$1 yes/g' /config/sshd/sshd_config
+perl -pi -e "s/^#?(Port) \d+/\$1 ${SSH_PORT:-2222}/g" /config/sshd/sshd_config
 
 # perl -pi -e 's/^#?(PasswordAuthentication) (?:yes|no)/$1 yes/g' /etc/ssh/sshd_config
 
 echo -e '\n# Cloud Run SSH server' >> /config/sshd/sshd_config
 
-if [[ "${SSH_USER_NAME}" == "root" ]]; then
+if [[ "${USER_NAME}" == "root" ]]; then
     echo 'PermitRootLogin yes' >> /config/sshd/sshd_config
 fi
 
