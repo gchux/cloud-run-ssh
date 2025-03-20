@@ -76,7 +76,9 @@ export USQL_VERSION='...'          # see: https://github.com/xo/usql/releases
 export SSH_USER='user'             # whatever user you want to use to login into the SSH server
 export SSH_PASS='pass'             # whatever password you want to use to login into the SSH server
 
-export WEB_PORT=8080               # whatever TCP port you want to use to server the WEB SSH server
+export WEB_PORT=8022               # whatever TCP port you want to use to serve the WEB SSH terminal
+export DEV_PORT=8088               # whatever TCP port you want to use to serve Visual Studio code
+export APP_PORT=8080               # whatever TCP port you want to use to serve the APP under test
 
 export IMAGE_NAME='cloud-run-ssh'  # or whatever name you need/require to use for the Docker image
 export IMAGE_TAG="${CONTENT_FLAVOR}-${ACCESS_LEVEL}"
@@ -104,49 +106,6 @@ source $(pwd)/.env
 > [!NOTE]
 > creating a copy of `env.sample` with your custom configuration is the better approach as you can expand this pattern to multiple `env files` in order to create various builds.
 
-### Using Docker
-
-Populate the variables and run the command:
-
-```sh
-./docker_build
-```
-
-alternatively, you may run the `docker` command directly:
-
-```sh
-# update versions of dependencies
-docker buildx build \
-  --no-cache --push \
-  --platform=linux/amd64 \
-  --file=$(pwd)/${DOCKERFILE} \
-  --tag="${IMAGE_URI_FULL}" \
-  --build-arg="SSH_USER=${SSH_USER}" \
-  --build-arg="SSH_PASS=${SSH_PASS}" \
-  --build-arg="WEB_PORT=${WEB_PORT}" \
-  --build-arg="PASSWORD_ACCESS=${PASSWORD_ACCESS}" \
-  --build-arg="SUDO_ACCESS=${SUDO_ACCESS}" \
-  --build-arg="GCSFUSE_VERSION=${GCSFUSE_VERSION}" \
-  --build-arg="CLOUDSDK_VERSION=${CLOUDSDK_VERSION}" \
-  --build-arg="CSQL_PROXY_VERSION=${CSQL_PROXY_VERSION}" \
-  --build-arg="ALLOYDB_PROXY_VERSION=${ALLOYDB_PROXY_VERSION}" \
-  --build-arg="USQL_VERSION=${USQL_VERSION}" \
-  $(pwd)
-```
-
-> [!NOTE]
-> see: https://cloud.google.com/artifact-registry/docs/docker/authentication
-
-### Using Cloud Build
-
-Adjust environment variables as per your requirements:
-
-```sh
-gcloud builds submit --config $(pwd)/cloudbuild.yaml \
---substitutions "_REPO_LOCATION=${REPO_LOCATION},_REPO_NAME=${REPO_NAME},_IMAGE_NAME=${IMAGE_NAME},_IMAGE_TAG=${IMAGE_TAG},_BUILD_TAG=${BUILD_TAG},_WEB_PORT=${WEB_PORT},_SSH_USER=${SSH_USER},_SSH_PASS=${SSH_PASS},_PASSWORD_ACCESS=${PASSWORD_ACCESS},_SUDO_ACCESS=${SUDO_ACCESS},_CLOUDSDK_VERSION=${CLOUDSDK_VERSION},_GCSFUSE_VERSION=${GCSFUSE_VERSION},_CSQL_PROXY_VERSION=${CSQL_PROXY_VERSION},_ALLOYDB_PROXY_VERSION=${ALLOYDB_PROXY_VERSION},_USQL_VERSION=${USQL_VERSION},_DOCKERFILE=${DOCKERFILE}" \
-$(pwd)
-```
-
 ### Using pre-built images
 
 ```sh
@@ -164,6 +123,28 @@ Choose from one of the following pre-built image flavors:
 > [!NOTE]
 > Docker image tag `latest` points to `CONTENT_FLAVOR=lite` and `ACCESS_LEVEL=root`
 
+### Using Docker
+
+Populate the variables and run the command:
+
+```sh
+# pass the full path to your env file to override `.env`
+./docker_build
+```
+
+> [!NOTE]
+> see: https://cloud.google.com/artifact-registry/docs/docker/authentication
+
+### Using Cloud Build
+
+Adjust environment variables as per your requirements:
+
+```sh
+gcloud builds submit --config $(pwd)/cloudbuild.yaml \
+--substitutions "_REPO_LOCATION=${REPO_LOCATION},_REPO_NAME=${REPO_NAME},_IMAGE_NAME=${IMAGE_NAME},_IMAGE_TAG=${IMAGE_TAG},_BUILD_TAG=${BUILD_TAG},_WEB_PORT=${WEB_PORT},_SSH_USER=${SSH_USER},_SSH_PASS=${SSH_PASS},_PASSWORD_ACCESS=${PASSWORD_ACCESS},_SUDO_ACCESS=${SUDO_ACCESS},_CLOUDSDK_VERSION=${CLOUDSDK_VERSION},_GCSFUSE_VERSION=${GCSFUSE_VERSION},_CSQL_PROXY_VERSION=${CSQL_PROXY_VERSION},_ALLOYDB_PROXY_VERSION=${ALLOYDB_PROXY_VERSION},_USQL_VERSION=${USQL_VERSION},_DOCKERFILE=${DOCKERFILE}" \
+$(pwd)
+```
+
 ## Deploying the image to Cloud Run
 
 ```sh
@@ -177,9 +158,10 @@ export SSH_AUTO_LOGIN='true|false'  # allow going straight to shell; requires `P
 gcloud run deploy ${SERVICE_NAME} \
    --image=${IMAGE_URI_FULL} \
    --region=${SERVICE_REGION} \
-   --port=8080 --execution-environment=gen2 \
+   --port=${WEB_PORT} \
+   --execution-environment=gen2 \
    --min-instances=0 --max-instances=1 \
-   --memory=2Gi --cpu=2 --cpu-boost \
+   --memory=1Gi --cpu=1 --cpu-boost \
    --timeout=3600s --no-use-http2 \
    --session-affinity --no-cpu-throttling \
    --set-env-vars="SUDO_ACCESS=${SUDO_ACCESS},PASSWORD_ACCESS=${PASSWORD_ACCESS},SSH_AUTO_LOGIN=${SSH_AUTO_LOGIN},LOG_STDOUT=true" \
@@ -232,7 +214,19 @@ gcloud run deploy ${SERVICE_NAME} \
 
       - define the environment variable `USER_PASSWORD_FILE` containing the exact file path; i/e: `/wssh/secrets/2/user_password`.
 
-  - `SSH_USER`: use the environment variable `USER_NAME`; this environment variable may also be defined using a secret.
+  - `SSH_USER`: use the environment variable `USER_NAME`:
+
+    - this environment variable may also be defined using a secret.
+
+    - it must not be set if the expected user is `root`.
+
+  - `WEB_PORT`: use the environment variable `WEBSSH_PORT`.
+
+    - when using the `lite` flavor, it will be overriden by the `PORT` environment variable.
+
+  - `DEV_PORT`: use the environment variable `WEBDEV_PORT`.
+
+  - `APP_PORT`: use the environment variable `WEBAPP_PORT`.
 
 - When using public key authentication, you may use the following alternatives to provide Public keys:
 
