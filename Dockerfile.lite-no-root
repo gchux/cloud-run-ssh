@@ -14,74 +14,76 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG SSH_SERVER_VERSION=amd64-9.7_p1-r4-ls174
+FROM ghcr.io/gchux/cloud-run-ssh:ubuntu-latest
 
-FROM --platform=linux/amd64 lscr.io/linuxserver/openssh-server:${SSH_SERVER_VERSION}
-# base image: https://github.com/linuxserver/docker-openssh-server
+ARG DEBIAN_FRONTEND=noninteractive
 
-ARG SSH_SERVER_VERSION=amd64-9.7_p1-r4-ls174
+ARG CONTENT_FLAVOR=lite
 
 ARG WEB_PORT="8022"
 ARG SSH_USER="user"
 ARG SSH_PASS="pass"
-ARG PASSWORD_ACCESS="true"
+ARG PASSWORD_ACCESS="false"
 ARG SUDO_ACCESS="false"
 
 ARG GCSFUSE_VERSION=2.7.0
 ARG GOST_VERSION=3.0.0
+ARG YQ_VERSION=4.45.1
+
+ENV SSH_CONTENT_FLAVOR=${CONTENT_FLAVOR}
 
 ENV USER_NAME=${SSH_USER}
+ENV SSH_USER_NAME=${SSH_USER}
 ENV USER_PASSWORD=${SSH_PASS}
-ENV HTTP_PORT=${WEB_PORT}
+ENV WEBSSH_PORT=${WEB_PORT}
 
 ENV PASSWORD_ACCESS=${PASSWORD_ACCESS}
 ENV SUDO_ACCESS=${SUDO_ACCESS}
 ENV LOG_STDOUT=true
+ENV SSH_PORT=2222
 
-COPY ./init_wssh ./keys/authorized_keys* /
+COPY ./webssh /webssh
+COPY ./init/svc ./init/wssh ./keys/authorized_keys* /bin/init/
+COPY ./conf/ssh.conf /svc.conf
 COPY ./keys/*.pub /pubkeys/
+COPY ./cloud_run_ssh_banner ./keys/authorized_keys* /
+
 COPY ./ssh_proxy_client.yaml /ssh_proxy_client.yaml
 COPY ./poll_ssh_proxy_server /poll_ssh_proxy_server
-COPY ./cloud_run_ssh_banner /cloud_run_ssh_banner
-COPY ./webssh /webssh
 
-RUN apk update && apk add --quiet --no-progress \
-    dpkg fuse vim busybox-extras net-tools bind-tools iproute2 \
-    openssl curl wget tmux git bc traceroute tcptraceroute tcpdump mtr nmap redis \
-    python3-dev py3-pip gcc libc-dev libffi-dev
+COPY ./scripts/gcurl /usr/local/bin/gcurl
+COPY ./scripts/gidcurl /usr/local/bin/gidcurl
 
-RUN wget -nv -q -P /usr/bin 'http://www.vdberg.org/~richard/tcpping' && chmod a+rx /usr/bin/tcpping
-RUN python -m pip config --user set global.progress_bar off \
-    && python -m pip install --break-system-packages httpie /webssh \
-    && curl -o /gcsfuse.deb -L https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v${GCSFUSE_VERSION}/gcsfuse_${GCSFUSE_VERSION}_amd64.deb \
-    && dpkg -i --force-all /gcsfuse.deb && rm -vf /gcsfuse.deb \
-    && curl -sL -o yq https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 && chmod +x /yq \
-    && curl -sL -o gost.tar.gz https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_linux_amd64.tar.gz \
+COPY ./catalogs/commands.json /webssh/webssh/static/json/commands.json
+
+RUN apt-get -qq update > /dev/null \
+    && apt-get -qq -yy install --no-install-recommends \
+    dpkg bash gettext vim net-tools iputils-ping dnsutils iproute2 iptables \
+    openssl curl wget tmux git bc traceroute tcptraceroute jq telnet \
+    tcpdump mtr nmap redis python3 strace python3-pip fuse3 > /dev/null \
+    && apt-get -qq clean > /dev/null
+
+RUN wget -nv -q -P /usr/bin 'http://www.vdberg.org/~richard/tcpping' \
+    && chmod a+rx /usr/bin/tcpping
+
+RUN python3 -m pip config --user set global.progress_bar off \
+    && python3 -m pip install --break-system-packages --no-cache-dir --quiet supervisor httpie /webssh
+
+RUN curl -o /gcsfuse.deb -L \
+    https://github.com/GoogleCloudPlatform/gcsfuse/releases/download/v${GCSFUSE_VERSION}/gcsfuse_${GCSFUSE_VERSION}_amd64.deb \
+    && dpkg -i --force-all /gcsfuse.deb && rm -vf /gcsfuse.deb
+
+RUN curl -sL -o yq \
+    https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64 \
+    && chmod +x /yq && ln -s /yq /usr/local/bin/yq
+
+RUN curl -sL -o gost.tar.gz \
+    https://github.com/go-gost/gost/releases/download/v${GOST_VERSION}/gost_${GOST_VERSION}_linux_amd64.tar.gz \
     && tar -xzf gost.tar.gz && chmod +x gost && rm -vf gost.tar.gz
 
-# see: https://github.com/linuxserver/docker-openssh-server?tab=readme-ov-file#application-setup
-RUN if [[ -f /authorized_keys ]] ; then mkdir -p /config/.ssh/ \
-    && cat /authorized_keys >> /config/.ssh/authorized_keys \
-    && mkdir -p /wssh/secrets/1 \
-    && mkdir -p /wssh/secrets/2 \
-    && mkdir -p /wssh/secrets/3 \
-    && cat /authorized_keys > /wssh/secrets/1/authorized_keys \
-    ; fi
+RUN echo "${WEBSSH_PORT}" > /webssh.port \
+    && mkdir -pv /dl/
 
-RUN if [[ "${USER_NAME}" == "root" ]] ; then \
-    echo "root:${USER_PASSWORD}" | chpasswd \
-    && sed --in-place '/PermitRootLogin/d' /etc/ssh/sshd_config \
-    && sed --in-place '/AuthorizedKeysFile/d' /etc/ssh/sshd_config \
-    && sed --in-place '/AllowTcpForwarding/d' /etc/ssh/sshd_config \
-    && sed --in-place '/Banner/d' /etc/ssh/sshd_config \
-    && echo -e '\nPermitRootLogin yes' >> /etc/ssh/sshd_config \
-    && echo -e '\nAuthorizedKeysFile /wssh/secrets/1/authorized_keys' >> /etc/ssh/sshd_config \
-    && echo -e '\nAllowTcpForwarding yes' >> /etc/ssh/sshd_config \
-    && echo -e '\nBanner /cloud_run_ssh_banner' >> /etc/ssh/sshd_config \
-    ; fi
+EXPOSE ${WEBSSH_PORT}/tcp
 
-RUN echo -n "${HTTP_PORT}" > /http.port
-
-EXPOSE ${HTTP_PORT}/tcp
-
-CMD ["exec", "env", "/init_wssh"]
+CMD ["exec", "env", "/bin/init/svc"]

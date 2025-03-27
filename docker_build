@@ -1,11 +1,14 @@
 #!/bin/bash
 
+export CLOUD_RUN_SSH_VERSION="`cat VERSION | tr -d '\n'`"
+
 set -x
 
 DEFAULT_ENV_FILE="$(pwd)/.env"
 ENV_FILE=${1:-$DEFAULT_ENV_FILE}
 
-echo "env: ${ENV_FILE}"
+echo "version: ${CLOUD_RUN_SSH_VERSION}"
+echo "environment: ${ENV_FILE}"
 
 if [ -f "${ENV_FILE}" ]; then
   source ${ENV_FILE}
@@ -23,7 +26,7 @@ fi
 cat ${KEYS_DIR}/*.pub > ${KEYS_DIR}/authorized_keys
 cat -n ${KEYS_DIR}/authorized_keys
 
-DOCKER_LOCAL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}"
+DOCKER_LOCAL_IMAGE="${IMAGE_NAME}:${IMAGE_TAG}-v${CLOUD_RUN_SSH_VERSION}"
 DOCKER_REMOTE_IMAGE="${IMAGE_URI_BASE}/${DOCKER_LOCAL_IMAGE}"
 
 if [ "${CONTENT_FLAVOR}" = "app" ]; then
@@ -72,9 +75,10 @@ docker buildx build \
   --build-arg="DOCKER_VERSION=${DOCKER_VERSION}" \
   --build-arg="GCREDS_HELPER_VERSION=${GCREDS_HELPER_VERSION}" \
   --build-arg="VSCODE_VERSION=${VSCODE_VERSION}" \
+  --label="VERSION=v${CLOUD_RUN_SSH_VERSION}" \
   --label="CONTENT_FLAVOR=v${CONTENT_FLAVOR}" \
-  --label="ACCESS_LEVEL=v${ACCESS_LEVEL}" \
-  --label="SSH_SERVER_VERSION=v${SSH_SERVER_VERSION}" \
+  --label="ACCESS_LEVEL=${ACCESS_LEVEL}" \
+  --label="SSH_SERVER_VERSION=${SSH_SERVER_VERSION}" \
   --label="GCSFUSE_VERSION=v${GCSFUSE_VERSION}" \
   --label="CLOUDSDK_VERSION=v${CLOUDSDK_VERSION}" \
   --label="CSQL_PROXY_VERSION=v${CSQL_PROXY_VERSION}" \
@@ -84,6 +88,8 @@ docker buildx build \
   --label="YQ_VERSION=${YQ_VERSION}" \
   --build-arg="SSH_USER=${SSH_USER}" \
   --build-arg="SSH_PASS=${SSH_PASS}" \
+  --build-arg="APP_PORT=${APP_PORT}" \
+  --build-arg="DEV_PORT=${DEV_PORT}" \
   --build-arg="WEB_PORT=${WEB_PORT}" \
   --build-arg="PASSWORD_ACCESS=${PASSWORD_ACCESS}" \
   --build-arg="SUDO_ACCESS=${SUDO_ACCESS}" \
@@ -93,5 +99,5 @@ if [ "${CONTENT_FLAVOR}" = "app" ]; then
   rm -rf ./tmp
 fi
 
-docker tag ${DOCKER_LOCAL_IMAGE} ${DOCKER_REMOTE_IMAGE}
-docker push ${DOCKER_REMOTE_IMAGE}
+docker tag "${DOCKER_LOCAL_IMAGE}" "${DOCKER_REMOTE_IMAGE}"
+docker push "${DOCKER_REMOTE_IMAGE}"

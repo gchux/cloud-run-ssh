@@ -76,6 +76,9 @@ cat /cloud_run_ssh_banner > /etc/motd
 
 ###############################################################################
 
+echo "${USER_NAME}:${USER_PASSWORD}" | chpasswd
+chsh -s /bin/bash "${USER_NAME}"
+
 sed -i '/PermitRootLogin/d' /config/sshd/sshd_config
 sed -i '/AuthorizedKeysFile/d' /config/sshd/sshd_config
 sed -i '/AllowTcpForwarding/d' /config/sshd/sshd_config

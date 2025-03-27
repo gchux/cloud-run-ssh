@@ -1,4 +1,9 @@
 {
+  "github.copilot.enabled": false,
+  "github.copilot.editor.enableCodeActions": false,
+  "github.copilot.nextEditSuggestions.enabled": false,
+  "chat.commandCenter.enabled": false,
+  "chat.agent.enabled": false,
   "telemetry.enableTelemetry": false,
   "telemetry.telemetryLevel": "off",
   "diffEditor.codeLens": false,
@@ -1244,12 +1249,7 @@
   "terminal.integrated.letterSpacing": 0,
   "terminal.integrated.lineHeight": 1,
   "terminal.integrated.localEchoEnabled": "off",
-  "terminal.integrated.localEchoExcludePrograms": [
-    "vim",
-    "vi",
-    "nano",
-    "tmux"
-  ],
+  "terminal.integrated.localEchoExcludePrograms": ["vim", "vi", "nano", "tmux"],
   "terminal.integrated.localEchoLatencyThreshold": 30,
   "terminal.integrated.localEchoStyle": "dim",
   "terminal.integrated.macOptionClickForcesSelection": false,
@@ -1283,22 +1283,16 @@
   "terminal.integrated.profiles.osx": {
     "bash": {
       "path": "bash",
-      "args": [
-        "-l"
-      ],
+      "args": ["-l"],
       "icon": "terminal-bash"
     },
     "zsh": {
       "path": "zsh",
-      "args": [
-        "-l"
-      ]
+      "args": ["-l"]
     },
     "fish": {
       "path": "fish",
-      "args": [
-        "-l"
-      ]
+      "args": ["-l"]
     },
     "tmux": {
       "path": "tmux",
@@ -1483,10 +1477,7 @@
     "diffEditor.ignoreTrimWhitespace": false
   },
   "[git-commit]": {
-    "editor.rulers": [
-      50,
-      72
-    ],
+    "editor.rulers": [50, 72],
     "editor.wordWrap": "off",
     "workbench.editor.restoreViewState": false
   },
@@ -1574,7 +1565,6 @@
     "diffEditor.ignoreTrimWhitespace": false,
     "editor.defaultColorDecorators": "never"
   },
-  "chat.commandCenter.enabled": true,
   "chat.detectParticipant.enabled": true,
   "chat.editing.autoAcceptDelay": 0,
   "chat.editing.confirmEditRequestRemoval": true,
@@ -1602,9 +1592,7 @@
   "remote.autoForwardPortsFallback": 20,
   "remote.autoForwardPortsSource": "process",
   "remote.extensionKind": {
-    "pub.name": [
-      "ui"
-    ]
+    "pub.name": ["ui"]
   },
   "remote.forwardOnOpen": true,
   "remote.localPortHost": "localhost",
@@ -1760,9 +1748,7 @@
   "accessibility.verbosity.walkthrough": true,
   "accessibility.windowTitleOptimized": true,
   "issueReporter.experimental.webReporter": false,
-  "emmet.excludeLanguages": [
-    "markdown"
-  ],
+  "emmet.excludeLanguages": ["markdown"],
   "emmet.extensionsPath": [],
   "emmet.includeLanguages": {},
   "emmet.optimizeStylesheetParsing": true,
@@ -1790,19 +1776,12 @@
   "git.branchPrefix": "",
   "git.branchProtection": [],
   "git.branchProtectionPrompt": "alwaysPrompt",
-  "git.branchRandomName.dictionary": [
-    "adjectives",
-    "animals"
-  ],
+  "git.branchRandomName.dictionary": ["adjectives", "animals"],
   "git.branchRandomName.enable": false,
   "git.branchSortOrder": "committerdate",
   "git.branchValidationRegex": "",
   "git.branchWhitespaceChar": "-",
-  "git.checkoutType": [
-    "local",
-    "remote",
-    "tags"
-  ],
+  "git.checkoutType": ["local", "remote", "tags"],
   "git.closeDiffOnOperation": false,
   "git.commandsToLog": [],
   "git.commitShortHashLength": 7,
@@ -1853,9 +1832,7 @@
   "git.rebaseWhenSync": false,
   "git.rememberPostCommitCommand": false,
   "git.replaceTagsWhenPull": false,
-  "git.repositoryScanIgnoredFolders": [
-    "node_modules"
-  ],
+  "git.repositoryScanIgnoredFolders": ["node_modules"],
   "git.repositoryScanMaxDepth": 1,
   "git.requireGitUserConfig": true,
   "git.scanRepositories": [],
