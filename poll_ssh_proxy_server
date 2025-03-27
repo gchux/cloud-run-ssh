@@ -3,7 +3,7 @@
 POLL_INTERVAL=${1:-60}
 POLL_METHOD=${2:-POST}
 
-source /cloud_run_ssh.env
+source /tmp/cloud_run_ssh.env
 
 export EXPECTED_SSH_PROXY_SERVER_NAME="${SSH_PROXY_SERVER_ID}.ssh-proxy.internal"
 

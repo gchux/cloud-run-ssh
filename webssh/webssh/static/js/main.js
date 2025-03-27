@@ -429,8 +429,13 @@ jQuery(function ($) {
     const $downloadButton = $toolbar.find("#downloadButton");
     const $editorButton = $toolbar.find("#editorButton");
 
-    const $buttons = $toolbar.add($cloudRunButton).add($downloadButton)
-      .add($transcriptButton).add($commandsButton).add($disconnectButton);
+    const $buttons = $toolbar
+      .add($cloudRunButton)
+      .add($downloadButton)
+      .add($transcriptButton)
+      .add($commandsButton)
+      .add($editorButton)
+      .add($disconnectButton);
 
     const transcriptModalElement = document.getElementById("transcriptModal");
     const $transcriptModal = $(transcriptModalElement);
@@ -455,6 +460,7 @@ jQuery(function ($) {
     });
     const $commandConfigModal = $(commandConfigModalElement);
     const $command = $commandConfigModal.find("#command");
+    const $commandPreview = $commandConfigModal.find("#commandPreview");
     const $commandConfig = $commandConfigModal.find("#commandConfig");
     const $runCommandButton = $commandConfigModal.find("#runCommandBtn");
     const $cancelCommandButton = $commandConfigModal.find("#cancelCommandBtn");
@@ -585,21 +591,32 @@ jQuery(function ($) {
         const {
           commandConfigModal,
           $command,
+          $commandPreview,
           $commandConfig,
         } = this;
 
+        console.log(`${op} => ${cmd.name}`, cmd);
+
+        if (op == "update") {
+          return false;
+        }
+
         commandConfigModal.hide();
         $commandConfig.empty();
-        $command.empty().text("command");
+        $command.text("command");
+        $commandPreview.addClass('d-none').empty();
 
-        console.log(`${op} => ${cmd.name}`, cmd);
-      }, { commandConfigModal, $command, $commandConfig }));
+        return true;
+      }, {
+        commandConfigModal,
+        $command,
+        $commandPreview,
+        $commandConfig
+      }));
 
-    $runCommandButton.on("click", function () {
-      const cmd = commandQueue.shift();
+    const getArgs = function(cmd) {
       const $args = $commandConfig.find(".cmd-arg");
       const args = {};
-
       $args.each(function () {
         const $arg = $(this);
         const cmdKey = $arg.data("cmd");
@@ -613,11 +630,29 @@ jQuery(function ($) {
           }
         }
       });
+      return args;
+    };
 
+    $commandConfigModal.on("keyup.cmd-arg",
+      _.debounce(function () {
+        const cmd = commandQueue[0];
+        const args = getArgs(cmd);
+        if ($.isEmptyObject(args)) {
+          $commandPreview.addClass('d-none').empty();
+        } else {
+          $commandPreview
+            .text(cmd.providers.cmd(args))
+            .removeClass('d-none');
+        }
+        $commandCallbacks.fire("update", cmd);
+      }, 300));
+
+    $runCommandButton.on("click", function () {
+      const cmd = commandQueue.shift();
+      const args = getArgs(cmd);
       if (!$.isEmptyObject(args)) {
         wssh.send(cmd.providers.cmd(args) + "\n");
       }
-
       $commandCallbacks.fire("exec", cmd);
     });
 
@@ -644,7 +679,7 @@ jQuery(function ($) {
 
     $editorButton.on("click", {
       ssh_server: window.ssh_server,
-    }, function(e) {
+    }, function (e) {
       const { ssh_server } = e.data;
       if (_.eq(ssh_server.flavor, "dev")) {
         window.open("/dev/", "_blank");

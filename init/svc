@@ -1,6 +1,6 @@
 #!/usr/bin/with-contenv bash
 
-source /cloud_run_ssh.env
+source /tmp/cloud_run_ssh.env
 
 printenv
 

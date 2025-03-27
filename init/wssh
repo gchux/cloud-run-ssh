@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source /cloud_run_ssh.env
+source /tmp/cloud_run_ssh.env
 
 if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
   # start tunnel with SSH Proxy Server

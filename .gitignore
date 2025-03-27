@@ -3,3 +3,4 @@ local-only/
 .env
 keys/
 env/
+.vscode/

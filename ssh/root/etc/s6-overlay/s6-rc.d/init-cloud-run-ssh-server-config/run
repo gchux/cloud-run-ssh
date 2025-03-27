@@ -15,36 +15,36 @@ export INSTANCE_ID=$(${MDS_CURL}/instance/id)
 UUID=$(openssl rand -hex 16)
 export INSTANCE_UUID="${UUID:0:8}-${UUID:8:4}-${UUID:12:4}-${UUID:16:4}-${UUID:20:12}"
 
-echo "export PROJECT_ID=${PROJECT_ID}" > /cloud_run_ssh.env
-echo "export PROJECT_NUM=${PROJECT_NUM}" >> /cloud_run_ssh.env
-echo "export GCP_REGION=${GCP_REGION}" >> /cloud_run_ssh.env
-echo "export K_SERVICE=${K_SERVICE}" >> /cloud_run_ssh.env
-echo "export K_REVISION=${K_REVISION}" >> /cloud_run_ssh.env
-echo "export INSTANCE_ID=${INSTANCE_ID}" >> /cloud_run_ssh.env
-echo "export INSTANCE_UUID=${INSTANCE_UUID}" >> /cloud_run_ssh.env
+echo "export PROJECT_ID=${PROJECT_ID}" > /tmp/cloud_run_ssh.env
+echo "export PROJECT_NUM=${PROJECT_NUM}" >> /tmp/cloud_run_ssh.env
+echo "export GCP_REGION=${GCP_REGION}" >> /tmp/cloud_run_ssh.env
+echo "export K_SERVICE=${K_SERVICE}" >> /tmp/cloud_run_ssh.env
+echo "export K_REVISION=${K_REVISION}" >> /tmp/cloud_run_ssh.env
+echo "export INSTANCE_ID=${INSTANCE_ID}" >> /tmp/cloud_run_ssh.env
+echo "export INSTANCE_UUID=${INSTANCE_UUID}" >> /tmp/cloud_run_ssh.env
 
 CLOUD_RUN_FQDN="${K_SERVICE}-${PROJECT_NUM}.${GCP_REGION}.run.app"
-echo "export CLOUD_RUN_FQDN='${CLOUD_RUN_FQDN}'" >> /cloud_run_ssh.env
-echo "export SSH_SERVER_URL='https://${CLOUD_RUN_FQDN}'" >> /cloud_run_ssh.env
+echo "export CLOUD_RUN_FQDN='${CLOUD_RUN_FQDN}'" >> /tmp/cloud_run_ssh.env
+echo "export SSH_SERVER_URL='https://${CLOUD_RUN_FQDN}'" >> /tmp/cloud_run_ssh.env
 
 export USER_NAME="${USER_NAME:-$SSH_USER_NAME}"
-echo "export USER_NAME=${USER_NAME}" >> /cloud_run_ssh.env
-echo "export SSH_USER_NAME=${USER_NAME}" >> /cloud_run_ssh.env
+echo "export USER_NAME=${USER_NAME}" >> /tmp/cloud_run_ssh.env
+echo "export SSH_USER_NAME=${USER_NAME}" >> /tmp/cloud_run_ssh.env
 
 DEFAULT_WEBSSH_PORT="$(cat /webssh.port | tr -d '\n')"
 export WEBSSH_PORT="${WEBSSH_PORT:-$DEFAULT_WEBSSH_PORT}"
-echo "export WEBSSH_PORT=${WEBSSH_PORT}" >> /cloud_run_ssh.env
+echo "export WEBSSH_PORT=${WEBSSH_PORT}" >> /tmp/cloud_run_ssh.env
 
 SSH_CONTENT_FLAVOR="${CONTENT_FLAVOR:-$SSH_CONTENT_FLAVOR}"
-echo "export SSH_CONTENT_FLAVOR=${SSH_CONTENT_FLAVOR:-undefined}" >> /cloud_run_ssh.env
+echo "export SSH_CONTENT_FLAVOR=${SSH_CONTENT_FLAVOR:-undefined}" >> /tmp/cloud_run_ssh.env
 
 export SSH_PROXY_SERVER_ENABLED=${ENABLE_SSH_PROXY:-false}
 if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
-  echo "export SSH_PROXY_CLIENT_ID=${INSTANCE_UUID}" >> /cloud_run_ssh.env
-  echo "export SSH_PROXY_SERVER_ID=${SSH_PROXY_SERVER_ID:-00000000-0000-0000-0000-000000000000}" >> /cloud_run_ssh.env
-  echo "export SSH_PROXY_SERVER_HOST=${SSH_PROXY_SERVER_HOST}" >> /cloud_run_ssh.env
-  echo "export SSH_PROXY_SERVER_API_PORT=${SSH_PROXY_SERVER_API_PORT:-5000}" >> /cloud_run_ssh.env
-  echo "export SSH_PROXY_SERVER_TUNNEL_PORT=${SSH_PROXY_SERVER_TUNNEL_PORT:-5555}" >> /cloud_run_ssh.env
+  echo "export SSH_PROXY_CLIENT_ID=${INSTANCE_UUID}" >> /tmp/cloud_run_ssh.env
+  echo "export SSH_PROXY_SERVER_ID=${SSH_PROXY_SERVER_ID:-00000000-0000-0000-0000-000000000000}" >> /tmp/cloud_run_ssh.env
+  echo "export SSH_PROXY_SERVER_HOST=${SSH_PROXY_SERVER_HOST}" >> /tmp/cloud_run_ssh.env
+  echo "export SSH_PROXY_SERVER_API_PORT=${SSH_PROXY_SERVER_API_PORT:-5000}" >> /tmp/cloud_run_ssh.env
+  echo "export SSH_PROXY_SERVER_TUNNEL_PORT=${SSH_PROXY_SERVER_TUNNEL_PORT:-5555}" >> /tmp/cloud_run_ssh.env
 
   sed -e "s|%SSH_PROXY_SERVER_ID%|${SSH_PROXY_SERVER_ID}|g" \
     -e "s|%SSH_PROXY_CLIENT_ID%|${INSTANCE_UUID}|g" \
@@ -61,9 +61,9 @@ if [[ "${SSH_PROXY_SERVER_ENABLED}" == "true" ]]; then
     -e "s|%SSH_HTTP_PORT%|${WEBSSH_PORT}|g" \
     /ssh_proxy_client.yaml > /tmp/ssh_proxy_client.yaml
 fi
-echo "export SSH_PROXY_SERVER_ENABLED=${SSH_PROXY_SERVER_ENABLED}" >> /cloud_run_ssh.env
+echo "export SSH_PROXY_SERVER_ENABLED=${SSH_PROXY_SERVER_ENABLED}" >> /tmp/cloud_run_ssh.env
 
-################################################################################
+cat -n /tmp/cloud_run_ssh.env
 
 echo "PROJECT:  ${PROJECT_ID}" >> /cloud_run_ssh_banner
 echo "REGION:   ${GCP_REGION}" >> /cloud_run_ssh_banner
@@ -73,8 +73,6 @@ echo "INSTANCE: ${INSTANCE_ID}" >> /cloud_run_ssh_banner
 echo "TUNNEL:   ${INSTANCE_UUID}" >> /cloud_run_ssh_banner
 echo -e '\n' >> /cloud_run_ssh_banner
 cat /cloud_run_ssh_banner > /etc/motd
-
-###############################################################################
 
 echo "${USER_NAME}:${USER_PASSWORD}" | chpasswd
 chsh -s /bin/bash "${USER_NAME}"
@@ -112,7 +110,6 @@ fi
 
 mkdir -pv /run/sshd
 chmod 0755 /run/sshd
+ln -s /usr/sbin/sshd /usr/sbin/sshd.pam
 
 chmod -x /etc/update-motd.d/*
-
-ln -s /usr/sbin/sshd /usr/sbin/sshd.pam

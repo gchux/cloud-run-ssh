@@ -224,7 +224,6 @@
   "editor.stickyScroll.maxLineCount": 5,
   "editor.stickyScroll.scrollWithEditor": true,
   "editor.stickyTabStops": false,
-  "editor.suggest.filteredTypes": {},
   "editor.suggest.filterGraceful": true,
   "editor.suggest.insertMode": "insert",
   "editor.suggest.localityBonus": false,
@@ -1153,7 +1152,6 @@
   "terminal.integrated.defaultProfile.windows": null,
   "terminal.integrated.detectLocale": "auto",
   "terminal.integrated.drawBoldTextInBrightColors": true,
-  "terminal.integrated.enableBell": false,
   "terminal.integrated.enableFileLinks": "on",
   "terminal.integrated.enableImages": false,
   "terminal.integrated.enableMultiLinePasteWarning": "auto",
@@ -1574,7 +1572,6 @@
   "chat.editor.fontWeight": "default",
   "chat.editor.lineHeight": 0,
   "chat.editor.wordWrap": "off",
-  "chat.experimental.detectParticipant.enabled": null,
   "chat.experimental.statusIndicator.enabled": false,
   "chat.implicitContext.enabled": {
     "panel": "always",
@@ -1708,7 +1705,7 @@
     "announcement": "auto"
   },
   "accessibility.signals.terminalBell": {
-    "sound": "auto",
+    "sound": "off",
     "announcement": "auto"
   },
   "accessibility.signals.terminalCommandFailed": {
