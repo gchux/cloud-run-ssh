@@ -18,7 +18,7 @@ The **`Cloud Run SSH server`** aims to provide full linux shell running in a Clo
 - Edit files and code using [Visual Studio Code](https://github.com/microsoft/vscode).
 - Run [Docker](https://docs.docker.com/engine/) containers on top of Cloud Run gen2.
 
-![cloud_run_ssh_ui](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_ui.png?raw=true)
+![cloud_run_ssh_ui](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_shell.png?raw=true)
 
 ![cloud_run_ssh_vscode](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh_vscode.png?raw=true)
 
