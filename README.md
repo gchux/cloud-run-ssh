@@ -1,3 +1,5 @@
+![Cloud Run SSH server version](https://img.shields.io/badge/v3.3.0-gree?style=flat&label=latest%20version&labelColor=rgay&color=green&link=https%3A%2F%2Fgithub.com%2Fgchux%2Fcloud-run-ssh%2Fpkgs%2Fcontainer%2Fcloud-run-ssh%2Fversions)
+
 # Cloud Run SSH server
 
 ![cloud_run_ssh](https://github.com/gchux/cloud-run-ssh/blob/main/pix/cloud_run_ssh.png?raw=true)
@@ -54,6 +56,23 @@ The **`Cloud Run SSH server`** aims to provide full linux shell running in a Clo
 > [!TIP]
 > choose `no-root` if you are providing this image to others so that installing new software is disabled.
 
+## Using pre-built images
+
+```sh
+docker pull ghcr.io/gchux/cloud-run-ssh:latest
+docker tag ghcr.io/gchux/cloud-run-ssh:latest ${IMAGE_URI_FULL}
+docker push ${IMAGE_URI_FULL}
+```
+
+Choose from one of the following pre-built image flavors:
+
+- ghcr.io/gchux/cloud-run-ssh:lite-root
+- ghcr.io/gchux/cloud-run-ssh:full-root
+- ghcr.io/gchux/cloud-run-ssh:dev-root
+
+> [!NOTE]
+> Docker image tag `latest` points to `CONTENT_FLAVOR=lite` and `ACCESS_LEVEL=root`
+
 ## Building the image
 
 ### Configure environment
@@ -105,23 +124,6 @@ source $(pwd)/.env
 
 > [!NOTE]
 > creating a copy of `env.sample` with your custom configuration is the better approach as you can expand this pattern to multiple `env files` in order to create various builds.
-
-### Using pre-built images
-
-```sh
-docker pull ghcr.io/gchux/cloud-run-ssh:latest
-docker tag ghcr.io/gchux/cloud-run-ssh:latest ${IMAGE_URI_FULL}
-docker push ${IMAGE_URI_FULL}
-```
-
-Choose from one of the following pre-built image flavors:
-
-- ghcr.io/gchux/cloud-run-ssh:lite-root
-- ghcr.io/gchux/cloud-run-ssh:full-root
-- ghcr.io/gchux/cloud-run-ssh:dev-root
-
-> [!NOTE]
-> Docker image tag `latest` points to `CONTENT_FLAVOR=lite` and `ACCESS_LEVEL=root`
 
 ### Using Docker
 
