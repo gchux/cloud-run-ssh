@@ -1,4 +1,4 @@
-![Cloud Run SSH server version](https://img.shields.io/badge/v3.3.0-green?style=flat&label=latest%20version&labelColor=gray&color=green&link=https%3A%2F%2Fgithub.com%2Fgchux%2Fcloud-run-ssh%2Fpkgs%2Fcontainer%2Fcloud-run-ssh%2Fversions)
+![Cloud Run SSH server version](https://img.shields.io/badge/v3.3.1-green?style=flat&label=latest%20version&labelColor=gray&color=green&link=https%3A%2F%2Fgithub.com%2Fgchux%2Fcloud-run-ssh%2Fpkgs%2Fcontainer%2Fcloud-run-ssh%2Fversions)
 
 # Cloud Run SSH server
 
