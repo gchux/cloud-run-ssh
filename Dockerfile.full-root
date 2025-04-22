@@ -93,8 +93,8 @@ RUN wget -nv -q -P / \
     && rm -vf /google-cloud-cli-${CLOUDSDK_VERSION}-linux-x86_64.tar.gz \
     && /google-cloud-sdk/bin/gcloud components install cbt alpha beta --quiet \
     && ln -s /google-cloud-sdk/bin/* /usr/bin/ \
-    && echo "export PATH=$PATH:/google-cloud-sdk/bin" >> ~/.bashrc \
-    && PATH="$PATH:/google-cloud-sdk/bin"
+    && echo 'export PATH=${PATH}:/google-cloud-sdk/bin' >> ~/.bashrc \
+    && PATH="${PATH}:/google-cloud-sdk/bin"
 
 RUN curl -sL -o /cloud-sql-proxy \
     https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v${CSQL_PROXY_VERSION}/cloud-sql-proxy.linux.amd64 \

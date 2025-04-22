@@ -157,10 +157,13 @@ export PASSWORD_ACCESS='true|false' # allow users to login using user and passwo
 export SUDO_ACCESS='true|false'     # allow users to use `sudo` and login as `root`.
 export SSH_AUTO_LOGIN='true|false'  # allow going straight to shell; requires `PASSWORD_ACCESS`.
 
+# set PORT to `8888` for `dev` and `app` server flavors.
+export CLOUD_RUN_PORT="${WEB_PORT}"
+
 gcloud run deploy ${SERVICE_NAME} \
    --image=${IMAGE_URI_FULL} \
    --region=${SERVICE_REGION} \
-   --port=${WEB_PORT} \
+   --port=${CLOUD_RUN_PORT} \
    --execution-environment=gen2 \
    --min-instances=0 --max-instances=1 \
    --memory=1Gi --cpu=1 --cpu-boost \

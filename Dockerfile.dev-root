@@ -119,7 +119,7 @@ RUN wget -nv -q -P / \
     && rm -vf /google-cloud-cli-${CLOUDSDK_VERSION}-linux-x86_64.tar.gz \
     && /google-cloud-sdk/bin/gcloud components install alpha beta --quiet \
     && ln -s /google-cloud-sdk/bin/* /usr/bin/ \
-    && echo "export PATH=$PATH:/google-cloud-sdk/bin" >> ~/.bashrc
+    && echo 'export PATH=${PATH}:/google-cloud-sdk/bin' >> ~/.bashrc
 
 WORKDIR /vscode
 

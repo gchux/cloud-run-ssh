@@ -31,9 +31,9 @@ ssh-keyscan -p 2222 127.0.0.1 2>/dev/null
 trap 'kill -TERM $SSH_WEB_SERVER_PID' TERM INT
 # web ssh terminal: https://github.com/huashengdun/webssh
 wssh --address='0.0.0.0' --port=${WEBSSH_PORT} \
-  --encoding='utf-8' --xheaders=True --debug=True \
+  --encoding='utf-8' --xheaders=True --debug=False \
   --origin='*' --policy=autoadd --log_to_stderr \
-  --logging=debug --redirect=False --fbidhttp=False \
+  --redirect=False --fbidhttp=False \
   --wpintvl=5 --maxconn=10 --xsrf=False &
 export SSH_WEB_SERVER_PID=$!
 echo "[INFO] – SSH web server started w/PID: ${SSH_WEB_SERVER_PID}"
