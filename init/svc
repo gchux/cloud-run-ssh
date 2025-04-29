@@ -2,6 +2,14 @@
 
 source /tmp/cloud_run_ssh.env
 
+if [[ "${SSH_CONTENT_FLAVOR}" == "dev" ]]; then
+  export PORT="${PORT:-8888}"
+elif [[ "${SSH_CONTENT_FLAVOR}" == "app" ]]; then
+  export PORT="${PORT:-8888}"
+else
+  export PORT="${PORT:-$WEBSSH_PORT}"
+fi
+
 printenv
 
 trap 'kill -TERM $SUPERVISOR_PID' TERM INT
